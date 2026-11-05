@@ -8,4 +8,33 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
-- The package skeleton.
+- `IconRegistry`, a catalogue of the icons the configured providers can draw, with scored search
+  over name, label, alias and use case, and typo tolerance as a fallback. Bound scoped, so it holds
+  the icon set for one request or job.
+- Providers for Flux (its own icons, and loose files and vendor directories in
+  `resources/views/flux/icon`) and for every Blade Icons set. Both are optional; a provider whose
+  package is not installed is skipped. Further providers implement `Contracts\IconProvider`.
+- Each icon has a key (`<vendor>.<name>`, the value to store) and a reference (what its provider's
+  component expects), so Flux's own icons are listed as `flux.home` and drawn as `home`.
+- `<x-icon-registry::icon icon="...">` and `IconRegistry::render()` draw a stored key with the
+  provider that listed it, and throw `UnknownIcon` for a key none lists.
+- The `IconExists` validation rule, with `vendor()` and `provider()` constraints and a suggestion for
+  the closest icon. When the cache predates an icon, it checks the providers before failing.
+  Messages in English and Dutch.
+- A metadata file for labels, aliases and use cases. Rewriting it keeps the header, section
+  banners and the comment above each entry.
+- `icon-registry:cache`, `icon-registry:clear`, `icon-registry:doctor` and `icon-registry:search`.
+  Named apart from Blade Icons' own `icons:cache` and `icons:clear`. `php artisan optimize` builds
+  the cache and `optimize:clear` removes it.
+
+### Notes for applications moving from an in-app registry
+
+This package grew out of the registry in an application of ours. Compared with that one:
+
+- The commands were `icons:*`; they are `icon-registry:*`.
+- The config key was `icons`, with a list of source paths; it is `icon-registry`, with providers.
+- Rewriting a metadata file whose `return [` is not on a line of its own (such as `var_export()`
+  output) used to keep the old `return` statement in the header, so the file went on returning the
+  old entries. It now keeps only what precedes `return`.
+- A cache or metadata file rewritten while opcache still held the previous version could be read
+  back stale within the same process. Both are invalidated after a write.

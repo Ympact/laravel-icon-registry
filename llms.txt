@@ -1,0 +1,53 @@
+# ympact/laravel-icon-registry
+
+> A Laravel package that provides ...
+
+**Supports:** PHP 8.3+, Laravel 12 and 13
+
+---
+
+## What it does
+
+---
+
+## Key concepts
+
+---
+
+## Installation
+
+
+---
+
+## Facade & helpers
+
+---
+
+## Creating an integration (recommended pattern)
+
+---
+
+## Artisan commands
+
+| Command | Purpose |
+|---|---|
+
+
+---
+
+## Key config keys 
+
+---
+
+## Common pitfalls
+
+
+---
+
+## Extension points
+
+---
+
+## Documentation
+
+Full docs are in `docs/` in the source repository (not distributed with the package).

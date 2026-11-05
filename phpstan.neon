@@ -1,0 +1,33 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+    - phpstan-baseline.neon
+
+parameters:
+
+    paths:
+        - src
+
+    # Exclude test code from analysis to avoid noise from test-only dynamic types
+    # and anonymous classes. The tests are run by Pest; keep analysis focused on
+    # production code in `src/` for now.
+
+    # Level 9 is the highest level
+    level: 8
+
+    # Fail the analysis if an ignoreErrors pattern does not match any reported
+    # error. This prevents stale suppressions from accumulating over time.
+    reportUnmatchedIgnoredErrors: true
+
+    # Tests and some runtime patterns rely on PHPDoc types and dynamic properties
+    # that phpstan cannot always infer. Relax strictness for PHPDoc-type certainty
+    # so method_exists()/property_exists checks and instanceOf branches that are
+    # only documented via PHPDoc don't produce false positives.
+    treatPhpDocTypesAsCertain: false
+
+    ignoreErrors:
+        # A trait meant for applications has no user inside the package; a package without
+        # traits has nothing to match, which is fine for this pattern only.
+        -
+            message: '#Trait .* is used zero times and is not analysed#'
+            reportUnmatched: false
+

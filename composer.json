@@ -1,19 +1,29 @@
 {
     "name": "ympact/laravel-icon-registry",
-    "description": "Package description",
+    "description": "A searchable catalogue of the icons a Laravel app can draw, across Flux, Blade Icons and your own providers.",
     "keywords": [
         "laravel",
-        "livewire",
-        "components"
+        "icons",
+        "icon-picker",
+        "flux",
+        "blade-icons",
+        "search"
     ],
     "type": "library",
     "require": {
         "php": "^8.3",
-        "illuminate/support": "^12.0|^13.0"
+        "illuminate/console": "^12.0|^13.0",
+        "illuminate/filesystem": "^12.0|^13.0",
+        "illuminate/support": "^12.0|^13.0",
+        "illuminate/validation": "^12.0|^13.0",
+        "illuminate/view": "^12.0|^13.0",
+        "laravel/prompts": "^0.3"
     },
     "require-dev": {
+        "blade-ui-kit/blade-icons": "^1.10",
         "larastan/larastan": "^3.12",
         "laravel/pint": "^1.32",
+        "livewire/flux": "^2.21",
         "mockery/mockery": "^1.6.15",
         "orchestra/testbench": "^10.12|^11.3",
         "pestphp/pest": "^4.7|^5.2",
@@ -22,14 +32,15 @@
         "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^12.5|^13.3"
     },
+    "suggest": {
+        "livewire/flux": "Lists Flux's icons and the icons in resources/views/flux/icon, including those built by ympact/flux-icons",
+        "blade-ui-kit/blade-icons": "Lists every registered Blade Icons set"
+    },
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "Ympact\\LaravelIconRegistry\\": "src/"
-        },
-        "files": [
-            "src/helpers.php"
-        ]
+            "Ympact\\IconRegistry\\": "src/"
+        }
     },
     "autoload-dev": {
         "psr-4": {
@@ -42,7 +53,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Ympact\\LaravelIconRegistry\\LaravelIconRegistryServiceProvider"
+                "Ympact\\IconRegistry\\IconRegistryServiceProvider"
             ]
         }
     },

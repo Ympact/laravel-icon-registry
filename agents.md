@@ -1,13 +1,13 @@
 ---
 applyTo: "**/*"
 ---
-# LaravelIconRegistry
+# Icon Registry
 
 This file is for coding agents working in this repo. Follow it literally.
 
 ## Project context
 
-- **ympact/laravel-icon-registry is a Laravel package**: [one sentence on what it provides].
+- **ympact/laravel-icon-registry is a Laravel package**: a searchable catalogue of the icons an application can draw, across Flux, Blade Icons and custom providers.
 - **Operate like a cofounder.** Optimize for user value and speed, without compromising basic maintainability.
 
 ## Non‑negotiables

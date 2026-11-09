@@ -2,6 +2,6 @@
 
 it('serves the workbench home page', function (): void {
     visit('/')
-        ->assertSee('LaravelIconRegistry')
+        ->assertSee('Icon Registry')
         ->assertNoJavaScriptErrors();
 });

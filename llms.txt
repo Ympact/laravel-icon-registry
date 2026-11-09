@@ -1,6 +1,8 @@
 # ympact/laravel-icon-registry
 
-> A Laravel package that provides ...
+> A Laravel package that catalogues the icons an application can draw (Flux, Blade Icons, custom
+> providers), searches them by name, label, alias and use case, validates stored icon keys and
+> draws them.
 
 **Supports:** PHP 8.3+, Laravel 12 and 13
 
@@ -8,22 +10,59 @@
 
 ## What it does
 
+Providers list icons; the registry merges them with the application's metadata file and offers
+search, a validation rule, a Blade component and a cache. It has no UI.
+
 ---
 
 ## Key concepts
+
+- **Key**: `<vendor>.<name>`, e.g. `tabler.home`, `heroicons.o-home`, `flux.home`. Store this.
+- **Reference**: what the provider's component expects (`home`, `heroicon-o-home`). Never store it.
+- **Provider**: lists and draws icons. Built in: `flux` (needs livewire/flux), `blade-icons`
+  (needs blade-ui-kit/blade-icons). Unavailable providers are skipped. First configured wins on a
+  duplicate key.
+- **Metadata**: `resources/icons/metadata.php`, keyed by icon key: `label`, `aliases`, `use_cases`.
 
 ---
 
 ## Installation
 
+```bash
+composer require ympact/laravel-icon-registry      # not --dev: it is used at runtime
+php artisan vendor:publish --tag=icon-registry-config   # optional
+```
 
 ---
 
 ## Facade & helpers
 
+```php
+use Ympact\IconRegistry\Facades\Icons;
+
+Icons::search('trash', vendor: 'tabler', limit: 20);   // Collection<int, Icon>
+Icons::find('tabler.trash');                          // ?Icon
+Icons::vendors();
+Icons::render('tabler.trash', ['class' => 'size-5']); // Htmlable; throws UnknownIcon
+```
+
+```blade
+<x-icon-registry::icon :icon="$model->icon" class="size-5" aria-hidden="true" />
+```
+
 ---
 
 ## Creating an integration (recommended pattern)
+
+Validate on save, draw with the component:
+
+```php
+use Ympact\IconRegistry\Rules\IconExists;
+
+$rules = ['icon' => ['nullable', 'string', new IconExists]];      // or IconExists::vendor('tabler')
+```
+
+A picker calls `Icons::search($query, vendor: $vendor)` per keystroke and stores `$icon->key`.
 
 ---
 
@@ -31,20 +70,33 @@
 
 | Command | Purpose |
 |---|---|
-
+| `icon-registry:cache` | Write the cache (also run by `php artisan optimize`). |
+| `icon-registry:clear` | Delete the cache (also run by `optimize:clear`). |
+| `icon-registry:doctor` | Report stale metadata/cache; fails on them. `--fix` repairs. |
+| `icon-registry:search` | Search from the terminal; `--json` for scripts. |
 
 ---
 
-## Key config keys 
+## Key config keys
+
+`providers` (name => `driver` + options), `providers.flux.path`, `providers.flux.loose_vendor`,
+`providers.flux.flux_icons`, `providers.blade-icons.sets`, `metadata`, `cache`.
 
 ---
 
 ## Common pitfalls
 
+- Storing the reference instead of the key: a Flux icon `home` is the key `flux.home`.
+- Forgetting the cache on deploy: run `php artisan optimize`, or each request scans every provider.
+- After building icons with ympact/flux-icons while a cache exists: run `icon-registry:cache`.
+- `icons:cache` is Blade Icons' command, not this package's.
 
 ---
 
 ## Extension points
+
+Implement `Ympact\IconRegistry\Contracts\IconProvider` (`isAvailable()`, `discover()` yielding
+`DiscoveredIcon`, `render()`) and add it under `providers` with a `driver` key.
 
 ---
 

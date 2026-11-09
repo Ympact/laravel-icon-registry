@@ -18,6 +18,10 @@ All notable changes to this package are documented here. The format follows
   component expects), so Flux's own icons are listed as `flux.home` and drawn as `home`.
 - `<x-icon-registry::icon icon="...">` and `IconRegistry::render()` draw a stored key with the
   provider that listed it, and throw `UnknownIcon` for a key none lists.
+- Drawn icons are decorative (`aria-hidden="true"`) unless given an accessible name. `label` renders
+  as `role="img"` with an `aria-label`; an explicit `aria-label`, `aria-labelledby`, `title`, `role`
+  or `aria-hidden` is respected. Flux's hardcoded `aria-hidden` is replaced by the resolved value,
+  and an attribute array passed to `render()` is escaped as Blade escapes component attributes.
 - The `IconExists` validation rule, with `vendor()` and `provider()` constraints and a suggestion for
   the closest icon. When the cache predates an icon, it checks the providers before failing.
   Messages in English and Dutch.

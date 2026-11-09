@@ -33,7 +33,7 @@ so a newly built icon is accepted without rebuilding the cache first.
 ## Draw a stored key
 
 ```blade
-<x-icon-registry::icon :icon="$item->icon" class="size-5" aria-hidden="true" />
+<x-icon-registry::icon :icon="$item->icon" class="size-5" />
 ```
 
 The component hands the attributes to the provider that listed the key: `<flux:icon>` for Flux
@@ -49,5 +49,34 @@ Drawing a key that no provider lists throws `Ympact\IconRegistry\Exceptions\Unkn
 and Blade Icons do for an unknown icon. Validate keys when they are saved, and run
 `icon-registry:doctor` in CI to catch icons removed after that.
 
-Decorative icons need `aria-hidden="true"`; an icon that carries meaning on its own needs an
-accessible name, for example `role="img"` with an `aria-label`.
+## Accessibility
+
+An icon is decorative unless you give it an accessible name, so it renders with
+`aria-hidden="true"`. Pass `label` when the icon carries meaning on its own:
+
+```blade
+<x-icon-registry::icon :icon="$item->icon" :label="__('Overdue')" />
+```
+
+```php
+Icons::render('tabler.alert-circle', ['label' => __('Overdue')]);
+```
+
+| Passed | Rendered |
+| --- | --- |
+| nothing | `aria-hidden="true"` |
+| `label="Overdue"` | `role="img" aria-label="Overdue"`; `label` itself is not rendered, and it replaces any `aria-hidden` |
+| an empty or null `label` | decorative, so `:label="$maybeEmpty"` is safe |
+| `aria-label` or `aria-labelledby` | those, plus `role="img"` and no `aria-hidden` |
+| `title` | as given, not hidden; Blade Icons turns it into a `<title>` element with `role="img"` |
+| `role` or `aria-hidden`, without a label | as given |
+
+The registry does not fall back to the icon's metadata label: that names the picture ("Trash"),
+not what it means where you use it ("Delete invoice"). In an icon-only button the icon stays
+decorative and the button takes the name:
+
+```blade
+<button type="button" aria-label="{{ __('Delete invoice') }}">
+    <x-icon-registry::icon icon="tabler.trash" class="size-5" />
+</button>
+```

@@ -61,10 +61,25 @@ class FluxIconProvider implements IconProvider
 
     public function render(Icon $icon, ComponentAttributeBag $attributes): Htmlable
     {
-        return new HtmlString($this->views->make('icon-registry::providers.flux', [
+        $html = $this->views->make('icon-registry::providers.flux', [
             'reference' => $icon->reference,
-            'attributes' => $attributes,
-        ])->render());
+            'attributes' => $attributes->except('aria-hidden'),
+        ])->render();
+
+        return new HtmlString($this->withAriaHidden($html, $attributes->get('aria-hidden')));
+    }
+
+    /**
+     * Flux hardcodes aria-hidden="true" on its icons, which would hide a labelled icon and
+     * duplicate the attribute on a decorative one, so the opening tag gets only the given value.
+     */
+    protected function withAriaHidden(string $html, ?string $value): string
+    {
+        return (string) preg_replace_callback('/<svg\b[^>]*>/', function (array $match) use ($value): string {
+            $tag = (string) preg_replace('/\s+aria-hidden="[^"]*"/', '', $match[0]);
+
+            return $value === null ? $tag : '<svg aria-hidden="'.$value.'"'.substr($tag, strlen('<svg'));
+        }, $html, 1);
     }
 
     /**

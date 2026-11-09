@@ -13,7 +13,7 @@ holds the icon set in memory for that request. Resolve it from the container, or
 | `find(string $key, bool $fresh = false): ?Icon` | The icon with this key, or null. |
 | `vendors(): Collection<int, string>` | The vendors, sorted. |
 | `search(?string $query = null, ?string $vendor = null, int $limit = 50, bool $fresh = false, ?string $provider = null): Collection<int, Icon>` | See [Searching and metadata](../usage/searching-and-metadata.md). |
-| `render(string $key, ComponentAttributeBag\|array $attributes = []): Htmlable` | The icon drawn by its provider. Throws `UnknownIcon` for a key no provider lists. |
+| `render(string $key, ComponentAttributeBag\|array $attributes = []): Htmlable` | The icon drawn by its provider, decorative unless `label` or another accessible name is given ([Accessibility](../usage/storing-and-drawing-icons.md#accessibility)). Throws `UnknownIcon` for a key no provider lists. |
 | `providers(): array<string, IconProvider>` | The configured providers whose packages are installed. |
 | `provider(string $name): IconProvider` | One of those; throws `InvalidArgumentException` otherwise. |
 

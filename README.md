@@ -11,7 +11,7 @@ $request->validate(['icon' => ['nullable', new IconExists]]);
 ```
 
 ```blade
-<x-icon-registry::icon :icon="$item->icon" class="size-5" aria-hidden="true" />
+<x-icon-registry::icon :icon="$item->icon" class="size-5" />
 ```
 
 ## Features

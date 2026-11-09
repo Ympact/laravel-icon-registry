@@ -8,6 +8,7 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\View\Compilers\BladeCompiler;
 use Illuminate\View\ComponentAttributeBag;
 use InvalidArgumentException;
 use Ympact\IconRegistry\Contracts\IconProvider;
@@ -97,7 +98,8 @@ class IconRegistry
     }
 
     /**
-     * Draws a stored icon key with the provider that listed it.
+     * Draws a stored icon key with the provider that listed it. An icon is decorative unless
+     * it is given an accessible name: pass `label` for `role="img"` and an `aria-label`.
      *
      * @param  ComponentAttributeBag|array<string, mixed>  $attributes
      *
@@ -107,9 +109,12 @@ class IconRegistry
     {
         $icon = $this->find($key) ?? $this->find($key, fresh: true) ?? throw UnknownIcon::key($key);
 
-        $attributes = is_array($attributes) ? new ComponentAttributeBag($attributes) : $attributes;
+        // A bag holds values Blade already sanitized and prints them raw, so an array must match.
+        $attributes = is_array($attributes)
+            ? new ComponentAttributeBag(array_map(BladeCompiler::sanitizeComponentAttribute(...), $attributes))
+            : $attributes;
 
-        return $this->provider($icon->provider)->render($icon, $attributes);
+        return $this->provider($icon->provider)->render($icon, $this->withAccessibility($attributes));
     }
 
     /**
@@ -249,6 +254,36 @@ class IconRegistry
             'metadata' => $cleaned,
             'written' => $write,
         ];
+    }
+
+    /**
+     * Turns `label` into an accessible name and hides anything without one. What the caller
+     * set explicitly is kept, because only the caller knows the icon's context.
+     */
+    protected function withAccessibility(ComponentAttributeBag $attributes): ComponentAttributeBag
+    {
+        $label = trim((string) $attributes->get('label', ''));
+        $given = $attributes->except('label')->getAttributes();
+
+        if ($label !== '') {
+            unset($given['aria-hidden']);
+
+            return new ComponentAttributeBag([...$given, 'role' => 'img', 'aria-label' => $label]);
+        }
+
+        if (is_bool($given['aria-hidden'] ?? null)) {
+            $given['aria-hidden'] = $given['aria-hidden'] ? 'true' : 'false';
+        }
+
+        if (isset($given['role']) || isset($given['aria-hidden']) || filled($given['title'] ?? null)) {
+            return new ComponentAttributeBag($given);
+        }
+
+        if (filled($given['aria-label'] ?? null) || filled($given['aria-labelledby'] ?? null)) {
+            return new ComponentAttributeBag([...$given, 'role' => 'img']);
+        }
+
+        return new ComponentAttributeBag([...$given, 'aria-hidden' => 'true']);
     }
 
     /**

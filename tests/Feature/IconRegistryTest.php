@@ -102,3 +102,42 @@ it('refuses a driver that is not an icon provider', function (): void {
 
     app(IconRegistry::class)->providers();
 })->throws(InvalidArgumentException::class, 'must implement');
+
+it('replaces the cache rather than writing into the file a request may be reading', function (): void {
+    $registry = app(IconRegistry::class);
+    $registry->rebuildCache();
+    $inode = fileinode($this->workspace->cachePath);
+
+    $registry->rebuildCache();
+    clearstatcache();
+
+    expect(fileinode($this->workspace->cachePath))->not->toBe($inode);
+});
+
+it('ignores a cache of another format instead of failing on it', function (): void {
+    File::ensureDirectoryExists(dirname($this->workspace->cachePath));
+    File::put($this->workspace->cachePath, "<?php return ['version' => 0, 'icons' => ['tabler.home' => ['legacy' => true]]];");
+
+    expect(app(IconRegistry::class)->find('tabler.home')?->label)->toBe('House');
+});
+
+it('restores a cached icon exactly as it was built', function (): void {
+    $registry = app(IconRegistry::class);
+    $built = $registry->find('tabler.home', fresh: true);
+    $registry->rebuildCache();
+    app()->forgetScopedInstances();
+
+    expect(app(IconRegistry::class)->find('tabler.home'))->toEqual($built)
+        ->and(app(IconRegistry::class)->all()->firstWhere('key', 'tabler.home'))->toEqual($built);
+});
+
+it('reports a cache whose labels no longer match the metadata as stale', function (): void {
+    app(IconRegistry::class)->rebuildCache();
+    expect(app(IconRegistry::class)->validate()['cache_is_fresh'])->toBeTrue();
+
+    touch($this->workspace->metadataPath, time() - 60);
+    $this->workspace->metadata(['tabler.home' => ['label' => 'Dwelling']]);
+    opcache_invalidate($this->workspace->metadataPath, true);
+
+    expect(app(IconRegistry::class)->validate()['cache_is_fresh'])->toBeFalse();
+});

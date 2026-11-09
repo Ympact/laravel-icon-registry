@@ -224,3 +224,13 @@ it('reads a rewritten file straight away, not the copy opcache still holds', fun
 
     expect($registry->metadata()->read())->toBe(['tabler.home' => ['label' => 'Home']]);
 })->skip(fn (): bool => ! filter_var(ini_get('opcache.enable_cli'), FILTER_VALIDATE_BOOL), 'Needs opcache.enable_cli, which CI turns on.');
+
+it('replaces the metadata file rather than rewriting it in place', function (): void {
+    $this->workspace->metadata(['tabler.home' => ['label' => 'Home']]);
+    $inode = fileinode($this->workspace->metadataPath);
+
+    app(IconRegistry::class)->metadata()->write(['tabler.home' => ['label' => 'Home']]);
+    clearstatcache();
+
+    expect(fileinode($this->workspace->metadataPath))->not->toBe($inode);
+});

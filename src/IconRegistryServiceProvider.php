@@ -31,7 +31,7 @@ class IconRegistryServiceProvider extends ServiceProvider
 
         // Deferred so a request that renders no Blade does not pay for resolving the compiler.
         $this->callAfterResolving(BladeCompiler::class, function (BladeCompiler $blade): void {
-            $blade->component('icon-registry::icon', $this->app['config']->string('icon-registry.component'));
+            $blade->component('icon-registry::icon', $this->app->make('config')->string('icon-registry.component'));
         });
 
         $this->publishes([

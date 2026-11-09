@@ -102,3 +102,7 @@ it('returns everything in label order when the query is empty', function (): voi
 it('limits the number of results', function (): void {
     expect(app(IconRegistry::class)->search('', limit: 3))->toHaveCount(3);
 });
+
+it('treats a negative limit as no results rather than slicing from the end', function (): void {
+    expect(app(IconRegistry::class)->search('', limit: -1))->toBeEmpty();
+});

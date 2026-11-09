@@ -10,6 +10,7 @@ package defaults.
 | --- | --- | --- |
 | `providers` | `flux`, `blade-icons` | Where icons come from, keyed by provider name. The name is what `Icon::$provider` and `IconExists::provider()` refer to. Order matters: when two providers list the same key, the first wins. |
 | `providers.*.driver` | | The class that lists and draws the icons; it implements `Ympact\IconRegistry\Contracts\IconProvider`. The rest of the entry is passed to it as `$options`. |
+| `component` | `registry-icon` | The Blade tag that draws a stored key, without its `x-` prefix. Run `php artisan view:clear` after changing it. Avoid `icon` when Blade Icons is installed: it registers `<x-icon>`. |
 | `metadata` | `resource_path('icons/metadata.php')` | The application's labels, aliases and use cases, keyed by icon key. |
 | `cache` | `base_path('bootstrap/cache/icon-registry.php')` | Where `optimize` and `icon-registry:cache` write the cache. |
 

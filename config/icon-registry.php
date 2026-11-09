@@ -67,6 +67,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Purposes
+    |--------------------------------------------------------------------------
+    |
+    | What icons mean in this application, keyed by purpose: the one icon that
+    | stands for it and its accessible label. Part of the application too.
+    |
+    */
+
+    'purposes' => resource_path('icons/purposes.php'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Cache
     |--------------------------------------------------------------------------
     |

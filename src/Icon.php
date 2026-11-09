@@ -18,6 +18,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
      * @param  string  $reference  What the provider's component expects, e.g. "home" or "heroicon-o-home".
      * @param  list<string>  $aliases
      * @param  list<string>  $useCases
+     * @param  list<string>  $purposes  The application purposes this icon stands for.
      * @param  array<string, int>  $terms  Lower-cased search terms, each weighted by where it came from.
      * @param  string  $searchText  The terms joined, so search can discard a non-match in one comparison.
      */
@@ -31,6 +32,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
         public ?string $path = null,
         public array $aliases = [],
         public array $useCases = [],
+        public array $purposes = [],
         public array $terms = [],
         public string $searchText = '',
     ) {}
@@ -52,6 +54,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
             path: $record['path'],
             aliases: $record['aliases'],
             useCases: $record['use_cases'],
+            purposes: $record['purposes'],
             terms: $record['terms'],
             searchText: $record['search_text'],
         );
@@ -69,7 +72,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
     }
 
     /**
-     * @return array{key: string, vendor: string, name: string, label: string, provider: string, reference: string, path: string|null, aliases: list<string>, use_cases: list<string>, terms: array<string, int>, search_text: string}
+     * @return array{key: string, vendor: string, name: string, label: string, provider: string, reference: string, path: string|null, aliases: list<string>, use_cases: list<string>, purposes: list<string>, terms: array<string, int>, search_text: string}
      */
     public function toArray(): array
     {
@@ -83,6 +86,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
             'path' => $this->path,
             'aliases' => $this->aliases,
             'use_cases' => $this->useCases,
+            'purposes' => $this->purposes,
             'terms' => $this->terms,
             'search_text' => $this->searchText,
         ];

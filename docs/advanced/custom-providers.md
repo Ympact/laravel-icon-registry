@@ -24,7 +24,9 @@ interface IconProvider
 - `discover()` yields a `DiscoveredIcon` for each icon: its vendor, its name, the reference your
   `render()` needs, and the file path if there is one. The registry makes the key
   `<vendor>.<name>` and adds the metadata.
-- `render()` draws an icon the provider listed.
+- `render()` draws an icon the provider listed. The registry has already applied the
+  [accessibility rules](../usage/storing-and-drawing-icons.md#accessibility), and values are already
+  escaped, so print `$attributes` as given.
 
 The provider is resolved from the container, with its config entry as `$options`.
 

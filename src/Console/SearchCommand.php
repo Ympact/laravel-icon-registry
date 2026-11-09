@@ -102,6 +102,7 @@ class SearchCommand extends Command
             ['Path', $icon->path ?? ''],
             ['Aliases', implode(', ', $icon->aliases)],
             ['Use cases', implode(', ', $icon->useCases)],
+            ['Purposes', implode(', ', $icon->purposes)],
         ]);
 
         note('Store the registry key, not the reference.');
@@ -120,13 +121,14 @@ class SearchCommand extends Command
         }
 
         table(
-            ['Key', 'Provider', 'Label', 'Aliases', 'Use cases'],
+            ['Key', 'Provider', 'Label', 'Aliases', 'Use cases', 'Purposes'],
             $results->map(fn (Icon $icon) => [
                 $icon->key,
                 $icon->provider,
                 $icon->label,
                 implode(', ', $icon->aliases),
                 implode(', ', $icon->useCases),
+                implode(', ', $icon->purposes),
             ])->all()
         );
 

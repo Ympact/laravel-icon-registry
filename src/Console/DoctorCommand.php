@@ -6,8 +6,8 @@ use Illuminate\Console\Command;
 use Ympact\IconRegistry\IconRegistry;
 
 /**
- * Reports the providers, the metadata and the cache, and optionally repairs what it can. It fails
- * on metadata or cache entries for icons that no longer exist, so it can guard CI.
+ * Reports the providers, the metadata, the purposes and the cache, and optionally repairs what it
+ * can. It fails on anything that refers to an icon that no longer exists, so it can guard CI.
  */
 class DoctorCommand extends Command
 {
@@ -26,6 +26,7 @@ class DoctorCommand extends Command
         $this->components->twoColumnDetail('Providers', implode(', ', array_keys($registry->providers())) ?: 'none available');
         $this->components->info("Found {$report['icon_count']} icons.");
         $this->components->info("Found {$report['metadata_count']} metadata entries.");
+        $this->components->info("Found {$report['purpose_count']} purposes.");
 
         match (true) {
             ! $report['cache_exists'] => $this->components->warn('Icon cache does not exist.'),
@@ -34,6 +35,8 @@ class DoctorCommand extends Command
         };
 
         $this->listKeys('Metadata exists for missing icons:', $report['orphaned_metadata']);
+        $this->listKeys('Purposes point at missing icons:', $report['orphaned_purposes']);
+        $this->listKeys('Purposes need both an icon and a label:', $report['malformed_purposes']);
         $this->listKeys('Cache contains icons that no longer exist:', $report['stale_cache_entries']);
         $this->listKeys('Listed by more than one provider (the first configured wins):', $report['shadowed_icons']);
 
@@ -43,7 +46,7 @@ class DoctorCommand extends Command
 
         $this->repair($registry);
 
-        return $report['orphaned_metadata'] !== [] || $report['stale_cache_entries'] !== []
+        return $report['orphaned_metadata'] !== [] || $report['orphaned_purposes'] !== [] || $report['malformed_purposes'] !== [] || $report['stale_cache_entries'] !== []
             ? self::FAILURE
             : self::SUCCESS;
     }

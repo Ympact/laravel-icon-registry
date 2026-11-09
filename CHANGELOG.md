@@ -9,7 +9,7 @@ All notable changes to this package are documented here. The format follows
 ### Added
 
 - `IconRegistry`, a catalogue of the icons the configured providers can draw, with scored search
-  over name, label, alias and use case, and typo tolerance as a fallback. Bound scoped, so it holds
+  over name, label, alias, use case and purpose, and typo tolerance as a fallback. Bound scoped, so it holds
   the icon set for one request or job.
 - Providers for Flux (its own icons, and loose files and vendor directories in
   `resources/views/flux/icon`) and for every Blade Icons set. Both are optional; a provider whose
@@ -19,12 +19,20 @@ All notable changes to this package are documented here. The format follows
 - `<x-registry-icon icon="...">` and `IconRegistry::render()` draw a stored key with the provider
   that listed it, and throw `UnknownIcon` for a key none lists. The component draws nothing for a
   null or empty key. The tag is configurable with `component`.
+- Drawn icons are decorative (`aria-hidden="true"`) unless given an accessible name. `label` renders
+  as `role="img"` with an `aria-label`; an explicit `aria-label`, `aria-labelledby`, `title`, `role`
+  or `aria-hidden` is respected. Flux's hardcoded `aria-hidden` is replaced by the resolved value,
+  and an attribute array passed to `render()` is escaped as Blade escapes component attributes.
 - The `IconExists` validation rule, with `vendor()` and `provider()` constraints and a suggestion for
   the closest icon. When the cache predates an icon, it checks the providers before failing.
   It rejects non-strings and keys with surrounding whitespace, which could not be drawn.
   Messages in English and Dutch.
 - A metadata file for labels, aliases and use cases. Rewriting it keeps the order of the
   entries, the header, section banners and the comment above each entry.
+- Purposes: `resources/icons/purposes.php` maps a meaning such as `action.delete` to one icon and an
+  accessible label. Draw one with `<x-registry-icon purpose="...">` or `renderPurpose()`, decorative
+  unless `labelled`. `purposes()` lists them, `purpose()` returns the icon, an undefined purpose throws
+  `UnknownPurpose`, and `icon-registry:doctor` fails on a malformed purpose or one whose icon no longer exists.
 - `icon-registry:cache`, `icon-registry:clear`, `icon-registry:doctor`, `icon-registry:search` and
   `icon-registry:export`.
   Named apart from Blade Icons' own `icons:cache` and `icons:clear`. `php artisan optimize` builds

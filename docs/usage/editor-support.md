@@ -56,7 +56,8 @@ The manifest is plain JSON, so other editors can use it. Its format:
             "reference": "tabler.trash",
             "path": "/app/resources/views/flux/icon/tabler/trash.blade.php",
             "aliases": ["delete"],
-            "use_cases": ["action.delete"]
+            "use_cases": ["action.delete"],
+            "purposes": ["action.delete"]
         }
     ]
 }

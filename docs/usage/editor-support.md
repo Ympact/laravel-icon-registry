@@ -35,6 +35,9 @@ icons, metadata or config change. In an untrusted workspace it never runs PHP. S
 the next export: add their directories to `iconRegistry.watch`, or run
 **Icon Registry: Refresh Icons**.
 
+The extension activates in folders where the package is installed. After a first
+`composer require`, reload the window.
+
 ## Other editors
 
 The manifest is plain JSON, so other editors can use it. Its format:

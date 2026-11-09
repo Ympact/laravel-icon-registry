@@ -26,8 +26,9 @@ class IconPicker extends Component
 
     public function choose(string $key): void
     {
+        validator(['icon' => $key], ['icon' => ['required', 'string', new IconExists]])->validate();
+
         $this->icon = $key;
-        $this->validate(['icon' => ['nullable', 'string', new IconExists]]);
     }
 }
 ```

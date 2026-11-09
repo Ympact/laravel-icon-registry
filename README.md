@@ -22,7 +22,7 @@ $request->validate(['icon' => ['nullable', new IconExists]]);
 - **Scored search** over names, labels, aliases and use cases, with typo tolerance.
 - **A metadata file** for labels and aliases, which the doctor command prunes without losing your comments.
 - **An `IconExists` rule** that suggests the closest icon.
-- **A cache** that `php artisan optimize` builds, cheap enough to read on every request.
+- **A cache** that `php artisan optimize` builds. With opcache, drawing a few icons does not load the whole set.
 - **A VS Code extension** that completes icon keys as you type. See [Editor support](docs/usage/editor-support.md).
 
 ## Requirements

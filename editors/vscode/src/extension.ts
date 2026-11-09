@@ -6,6 +6,7 @@ import { CONTEXT_LENGTH, iconKeyPrefix, searchIcons } from './matching.js';
 const LANGUAGES = ['blade', 'laravel-blade', 'php'];
 const EXPORT_DEBOUNCE_MS = 1000;
 const EXPORT_TIMEOUT_MS = 60_000;
+const PACKAGE_MARKER = 'vendor/ympact/laravel-icon-registry/composer.json';
 
 /** One workspace folder's manifest and the watchers and export run that keep it current. */
 class FolderIcons implements vscode.Disposable {
@@ -15,6 +16,7 @@ class FolderIcons implements vscode.Disposable {
     private debounce: NodeJS.Timeout | undefined;
     private exporting = false;
     private exportAgain = false;
+    private installed = false;
 
     constructor(readonly folder: vscode.WorkspaceFolder, private readonly log: vscode.OutputChannel) {}
 
@@ -23,11 +25,18 @@ class FolderIcons implements vscode.Disposable {
     }
 
     async start(): Promise<void> {
+        // In a multi-root workspace only some folders may use the package; leave the rest alone.
+        this.installed = await this.hasPackage();
+
+        if (!this.installed) {
+            return;
+        }
+
         const manifestPath = this.settings.get<string>('manifestPath', '');
         const manifestWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.folder, manifestPath));
         const load = () => void this.load();
 
-        this.disposables.push(manifestWatcher, manifestWatcher.onDidCreate(load), manifestWatcher.onDidChange(load));
+        this.disposables.push(manifestWatcher, manifestWatcher.onDidCreate(load), manifestWatcher.onDidChange(load), manifestWatcher.onDidDelete(load));
 
         for (const pattern of this.settings.get<string[]>('watch', [])) {
             const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(this.folder, pattern));
@@ -38,6 +47,16 @@ class FolderIcons implements vscode.Disposable {
 
         if (!(await this.load())) {
             this.export();
+        }
+    }
+
+    private async hasPackage(): Promise<boolean> {
+        try {
+            await vscode.workspace.fs.stat(vscode.Uri.joinPath(this.folder.uri, PACKAGE_MARKER));
+
+            return true;
+        } catch {
+            return false;
         }
     }
 
@@ -61,7 +80,7 @@ class FolderIcons implements vscode.Disposable {
 
     /** Runs the export unless the workspace is untrusted; a change during a run queues one more. */
     export(force = false): void {
-        if (!vscode.workspace.isTrusted || (!force && !this.settings.get<boolean>('autoExport', true))) {
+        if (!this.installed || !vscode.workspace.isTrusted || (!force && !this.settings.get<boolean>('autoExport', true))) {
             return;
         }
 
@@ -72,6 +91,12 @@ class FolderIcons implements vscode.Disposable {
         }
 
         const [command, ...prefix] = this.settings.get<string[]>('phpCommand', ['php']);
+
+        if (!command) {
+            this.log.appendLine('iconRegistry.phpCommand is empty, so the export did not run.');
+
+            return;
+        }
 
         this.exporting = true;
 
@@ -159,7 +184,7 @@ export function activate(context: vscode.ExtensionContext): void {
         { dispose: () => folders.forEach((folder) => folder.dispose()) },
         vscode.workspace.onDidChangeWorkspaceFolders(sync),
         vscode.workspace.onDidGrantWorkspaceTrust(sync),
-        vscode.languages.registerCompletionItemProvider(LANGUAGES, provider, '"', "'", '.', '-'),
+        vscode.languages.registerCompletionItemProvider(LANGUAGES, provider, '"', "'", '.', '-', ' '),
         vscode.commands.registerCommand('iconRegistry.refresh', () => folders.forEach((folder) => folder.export(true))),
         vscode.commands.registerCommand('iconRegistry.search', async () => {
             const editor = vscode.window.activeTextEditor;

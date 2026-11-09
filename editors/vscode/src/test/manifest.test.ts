@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { test } from 'node:test';
 import { parseManifest, SUPPORTED_MANIFEST_VERSION } from '../manifest.js';
 
@@ -22,4 +24,10 @@ test('drops an entry of the wrong shape and keeps the rest', () => {
     const manifest = parseManifest(JSON.stringify({ version: SUPPORTED_MANIFEST_VERSION, component: 'x', icons: [icon, { key: 1 }, null] }));
 
     assert.equal(manifest?.icons.length, 1);
+});
+
+test('activates only where the package is installed, so artisan never runs in other projects', () => {
+    const extension = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf8'));
+
+    assert.deepEqual(extension.activationEvents, ['workspaceContains:vendor/ympact/laravel-icon-registry/composer.json']);
 });

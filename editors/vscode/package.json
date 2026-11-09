@@ -17,7 +17,7 @@
   "categories": ["Programming Languages", "Other"],
   "keywords": ["laravel", "blade", "icons", "flux", "autocomplete"],
   "main": "./out/extension.js",
-  "activationEvents": ["workspaceContains:artisan"],
+  "activationEvents": ["workspaceContains:vendor/ympact/laravel-icon-registry/composer.json"],
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",

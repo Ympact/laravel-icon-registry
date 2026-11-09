@@ -17,6 +17,9 @@ command itself when the manifest is missing and when your icons, metadata or con
 
 In an untrusted workspace it never runs PHP. Completion then uses a manifest that already exists.
 
+The extension activates in folders where the package is installed. After a first
+`composer require`, reload the window.
+
 ## Settings
 
 | Setting | Default | Purpose |

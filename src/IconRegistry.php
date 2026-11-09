@@ -309,7 +309,6 @@ class IconRegistry
         $cleaned = collect($metadata)
             ->filter(fn (array $entry, string $key) => $validKeys->has($key))
             ->map(fn (array $entry) => $file->normalizeEntry($entry))
-            ->sortKeys()
             ->all();
 
         if ($write) {

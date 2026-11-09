@@ -251,3 +251,35 @@ it('creates a metadata file that is not executable', function (): void {
 
     expect(fileperms($this->workspace->metadataPath) & 0777)->toBe(0666 & ~umask());
 });
+
+it('keeps the order of the entries when it prunes, so a section stays under its banner', function (): void {
+    writeMetadataFixture($this->workspace->metadataPath, <<<'PHP'
+
+            // ----------------------------------------------------------
+            // tabler.*: our default set
+            // ----------------------------------------------------------
+
+            'tabler.trash' => [
+                'label' => 'Delete',
+            ],
+
+            'tabler.gone' => [
+                'label' => 'Gone',
+            ],
+
+            'tabler.home' => [
+                'label' => 'Home',
+            ],
+
+            'acme.labels' => [
+                'label' => 'Labels',
+            ],
+        PHP);
+
+    app(IconRegistry::class)->cleanMetadata(write: true);
+
+    $written = File::get($this->workspace->metadataPath);
+
+    expect(array_keys(require $this->workspace->metadataPath))->toBe(['tabler.trash', 'tabler.home', 'acme.labels'])
+        ->and(strpos($written, 'our default set'))->toBeLessThan(strpos($written, "'tabler.trash'"));
+});

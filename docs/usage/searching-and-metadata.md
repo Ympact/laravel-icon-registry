@@ -61,8 +61,8 @@ When a cache exists, edits to this file take effect after `php artisan icon-regi
 
 `php artisan icon-registry:doctor` lists metadata for icons that no longer exist and fails when it
 finds any, so it can guard CI. `--prune-meta` (or `--fix`) removes those entries and rewrites the
-file. The rewrite keeps the file header, section banners (a comment block ruled with `---`) and the
-comment above each entry. A section banner whose first entry is pruned moves to the next entry of
+file. The rewrite keeps the order of the entries, the file header, section banners (a comment block
+ruled with `---`) and the comment above each entry. A section banner whose first entry is pruned moves to the next entry of
 that vendor.
 
 A file whose `return [` is not on a line of its own, such as `var_export()` output, keeps whatever

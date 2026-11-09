@@ -23,8 +23,8 @@ All notable changes to this package are documented here. The format follows
   the closest icon. When the cache predates an icon, it checks the providers before failing.
   It rejects non-strings and keys with surrounding whitespace, which could not be drawn.
   Messages in English and Dutch.
-- A metadata file for labels, aliases and use cases. Rewriting it keeps the header, section
-  banners and the comment above each entry.
+- A metadata file for labels, aliases and use cases. Rewriting it keeps the order of the
+  entries, the header, section banners and the comment above each entry.
 - `icon-registry:cache`, `icon-registry:clear`, `icon-registry:doctor`, `icon-registry:search` and
   `icon-registry:export`.
   Named apart from Blade Icons' own `icons:cache` and `icons:clear`. `php artisan optimize` builds

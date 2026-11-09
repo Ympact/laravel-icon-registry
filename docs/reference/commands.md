@@ -21,7 +21,7 @@ entries, so it can run in CI.
 | Option | Effect |
 | --- | --- |
 | `--fix` | All three repairs below. |
-| `--prune-meta` | Removes metadata entries for icons that no longer exist and rewrites the file, keeping its comments. |
+| `--prune-meta` | Removes metadata entries for icons that no longer exist and rewrites the file, keeping its order and comments. |
 | `--clear-cache` | Deletes the cache. |
 | `--rebuild-cache` | Rebuilds the cache. |
 

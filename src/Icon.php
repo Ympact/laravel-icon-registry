@@ -58,6 +58,17 @@ final readonly class Icon implements Arrayable, JsonSerializable
     }
 
     /**
+     * Only so a cache of var_exported icons, as earlier builds wrote, can load and be rejected
+     * by its missing version. Without it, requiring that file is a fatal error.
+     *
+     * @param  array<string, mixed>  $properties
+     */
+    public static function __set_state(array $properties): self
+    {
+        return new self(...$properties);
+    }
+
+    /**
      * @return array{key: string, vendor: string, name: string, label: string, provider: string, reference: string, path: string|null, aliases: list<string>, use_cases: list<string>, terms: array<string, int>, search_text: string}
      */
     public function toArray(): array

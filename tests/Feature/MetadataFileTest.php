@@ -234,3 +234,20 @@ it('replaces the metadata file rather than rewriting it in place', function (): 
 
     expect(fileinode($this->workspace->metadataPath))->not->toBe($inode);
 });
+
+it('keeps the file mode of a metadata file it rewrites', function (): void {
+    $this->workspace->metadata(['tabler.home' => ['label' => 'Home']]);
+    chmod($this->workspace->metadataPath, 0640);
+
+    app(IconRegistry::class)->metadata()->write(['tabler.home' => ['label' => 'Home']]);
+    clearstatcache();
+
+    expect(fileperms($this->workspace->metadataPath) & 0777)->toBe(0640);
+});
+
+it('creates a metadata file that is not executable', function (): void {
+    app(IconRegistry::class)->metadata()->write(['tabler.home' => ['label' => 'Home']]);
+    clearstatcache();
+
+    expect(fileperms($this->workspace->metadataPath) & 0777)->toBe(0666 & ~umask());
+});

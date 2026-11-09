@@ -143,3 +143,40 @@ it('reports a cache whose labels no longer match the metadata as stale', functio
 
     expect(app(IconRegistry::class)->validate()['cache_is_fresh'])->toBeFalse();
 });
+
+it('rebuilds over a cache of objects, the format earlier builds wrote', function (): void {
+    File::ensureDirectoryExists(dirname($this->workspace->cachePath));
+    File::put($this->workspace->cachePath, <<<'PHP'
+        <?php
+
+        return array (
+          0 =>
+          \Ympact\IconRegistry\Icon::__set_state(array(
+             'key' => 'tabler.home',
+             'vendor' => 'tabler',
+             'name' => 'home',
+             'label' => 'Stale',
+             'provider' => 'flux',
+             'reference' => 'tabler.home',
+             'path' => NULL,
+             'aliases' => array (),
+             'useCases' => array (),
+             'terms' => array (),
+          )),
+        );
+        PHP);
+
+    expect(app(IconRegistry::class)->find('tabler.home')?->label)->toBe('House');
+});
+
+it('does not make the files it generates executable', function (): void {
+    $registry = app(IconRegistry::class);
+    $manifest = "{$this->workspace->root}/editor.json";
+
+    $registry->rebuildCache();
+    $registry->writeEditorManifest($manifest);
+    clearstatcache();
+
+    expect(fileperms($this->workspace->cachePath) & 0777)->toBe(0666 & ~umask())
+        ->and(fileperms($manifest) & 0777)->toBe(0666 & ~umask());
+});

@@ -217,7 +217,7 @@ class IconRegistry
         $this->files->replace($this->cachePath(), "<?php\n\nreturn ".var_export([
             'version' => self::CACHE_VERSION,
             'icons' => $this->recordsOf($icons),
-        ], true).";\n");
+        ], true).";\n", $this->generatedFileMode());
 
         // Opcache would otherwise serve the previous cache to the next `require` in this process.
         if (function_exists('opcache_invalidate')) {
@@ -248,7 +248,7 @@ class IconRegistry
             'version' => self::EDITOR_MANIFEST_VERSION,
             'component' => $this->config->string('icon-registry.component'),
             'icons' => $icons,
-        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $this->generatedFileMode());
 
         return $icons->count();
     }
@@ -453,6 +453,14 @@ class IconRegistry
     protected function recordsOf(Collection $icons): array
     {
         return $icons->mapWithKeys(fn (Icon $icon) => [$icon->key => $icon->toArray()])->all();
+    }
+
+    /**
+     * Filesystem::replace() would otherwise default to an executable file.
+     */
+    protected function generatedFileMode(): int
+    {
+        return 0666 & ~umask();
     }
 
     protected function forgetMemoized(): void

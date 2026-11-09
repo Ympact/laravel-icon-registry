@@ -4,9 +4,11 @@ use BladeUI\Icons\Factory;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Tests\Support\IconWorkspace;
+use Ympact\IconRegistry\Actions\AddIconUseCases;
 use Ympact\IconRegistry\Actions\ScanIconUsages;
 use Ympact\IconRegistry\Console\ScanCommand;
 use Ympact\IconRegistry\IconRegistry;
+use Ympact\IconRegistry\IconSearch;
 use Ympact\IconRegistry\IconUsage;
 use Ympact\IconRegistry\IconUsageReport;
 
@@ -265,6 +267,69 @@ describe('--write', function (): void {
         artisan('icon-registry:scan', ['--path' => [$this->source], '--write' => true, '--force' => true])->assertSuccessful();
 
         expect(app(IconRegistry::class)->search('favourite')->pluck('key')->all())->toBe(['app.star']);
+    });
+
+    it('suggests nothing for a generic icon, and still reports it', function (): void {
+        ($this->scan)('page.blade.php', '<flux:button icon="chevron-up">Label</flux:button>');
+
+        artisan('icon-registry:scan', ['--path' => [$this->source], '--write' => true, '--force' => true])
+            ->expectsOutputToContain('app.chevron-up')
+            ->expectsOutputToContain('No new use cases to add.')
+            ->assertSuccessful();
+
+        expect($this->workspace->metadataPath)->not->toBeFile();
+    });
+
+    it('leaves a locked entry unchanged, and still adds to the entry beside it', function (): void {
+        File::ensureDirectoryExists(dirname($this->workspace->metadataPath));
+        File::put($this->workspace->metadataPath, <<<'PHP'
+            <?php
+
+            return [
+
+                'app.star' => [
+                    'use_cases' => ['action.highlight'],
+                    'locked' => true,
+                ],
+
+                'tabler.home' => [
+                    'use_cases' => ['navigation.start'],
+                ],
+
+            ];
+            PHP);
+
+        ($this->scan)('page.blade.php', '<flux:button icon="star">Favourite</flux:button><flux:button icon="tabler.home">Dashboard</flux:button>');
+
+        artisan('icon-registry:scan', ['--path' => [$this->source], '--write' => true, '--force' => true])->assertSuccessful();
+
+        expect(require $this->workspace->metadataPath)->toBe([
+            'app.star' => ['use_cases' => ['action.highlight'], 'locked' => true],
+            'tabler.home' => ['use_cases' => ['navigation.start', 'dashboard']],
+        ]);
+    });
+
+    it('counts only the entries written when one is locked during the preview', function (): void {
+        ($this->scan)('page.blade.php', '<flux:button icon="star">Favourite</flux:button><flux:button icon="tabler.home">Dashboard</flux:button>');
+
+        $action = new class(app(IconRegistry::class), app(IconSearch::class)) extends AddIconUseCases
+        {
+            public string $lockedFile;
+
+            public function handle(array $additions): int
+            {
+                File::ensureDirectoryExists(dirname($this->lockedFile));
+                File::put($this->lockedFile, "<?php\n\nreturn [\n\n    'app.star' => [\n        'locked' => true,\n    ],\n\n];\n");
+
+                return parent::handle($additions);
+            }
+        };
+        $action->lockedFile = $this->workspace->metadataPath;
+        app()->instance(AddIconUseCases::class, $action);
+
+        artisan('icon-registry:scan', ['--path' => [$this->source], '--write' => true, '--force' => true])
+            ->expectsOutputToContain('Added use cases to 1 icons.')
+            ->assertSuccessful();
     });
 
     it('refuses to combine with --json', function (): void {

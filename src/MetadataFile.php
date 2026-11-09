@@ -75,11 +75,22 @@ class MetadataFile
     }
 
     /**
+     * Whether the entry is hand-curated: scans add nothing to it and a rewrite keeps its text.
+     *
+     * @param  array<string, mixed>  $entry
+     */
+    public function isLocked(array $entry): bool
+    {
+        return (bool) ($entry['locked'] ?? false);
+    }
+
+    /**
      * @param  array<string, array<string, mixed>>  $metadata
      */
     public function write(array $metadata): void
     {
-        ['header' => $header, 'comments' => $comments, 'keys' => $sourceKeys] = $this->parseSource();
+        ['header' => $header, 'comments' => $comments, 'keys' => $sourceKeys, 'sources' => $sources] = $this->parseSource();
+        $stored = $this->read();
 
         $comments = $this->rehomeBanners($comments, $sourceKeys, array_keys($metadata));
 
@@ -90,11 +101,18 @@ class MetadataFile
                 $body .= $banner."\n\n";
             }
 
-            if ($note = $comments[$key]['note'] ?? null) {
+            // Only an entry this write does not change can be copied, or the change would be lost.
+            $verbatim = $this->isLocked($entry) && ($stored[$key] ?? null) === $entry ? ($sources[$key] ?? null) : null;
+
+            $note = $verbatim === null
+                ? implode("\n\n", array_filter([$comments[$key]['note'] ?? null, $comments[$key]['inner'] ?? null]))
+                : ($comments[$key]['note'] ?? '');
+
+            if ($note !== '') {
                 $body .= $note."\n";
             }
 
-            $body .= $this->renderEntry($key, $entry);
+            $body .= $verbatim === null ? $this->renderEntry($key, $entry) : implode("\n", $verbatim)."\n\n";
         }
 
         $this->files->ensureDirectoryExists(dirname($this->path));
@@ -133,17 +151,18 @@ class MetadataFile
      * Splits the file into its header and the comments preceding each top-level entry, telling
      * a section banner (a ruled block heading a vendor's entries) apart from a note on the entry.
      *
-     * @return array{header: string, comments: array<string, array{banner: ?string, note: ?string}>, keys: list<string>}
+     * @return array{header: string, comments: array<string, array{banner: ?string, note: ?string, inner?: string}>, keys: list<string>, sources: array<string, list<string>>}
      */
     protected function parseSource(): array
     {
         if (! $this->files->exists($this->path)) {
-            return ['header' => self::HEADER, 'comments' => [], 'keys' => []];
+            return ['header' => self::HEADER, 'comments' => [], 'keys' => [], 'sources' => []];
         }
 
         $header = [];
         $comments = [];
         $keys = [];
+        $sources = [];
         $blocks = [];
         $block = [];
         $current = null;
@@ -165,6 +184,10 @@ class MetadataFile
                 continue;
             }
 
+            if ($depth > 0 && $current !== null) {
+                $sources[$current][] = $line;
+            }
+
             if (preg_match('/^\s*(?:\/\/|#|\/\*|\*)/', $line)) {
                 $block[] = rtrim($line);
 
@@ -184,6 +207,7 @@ class MetadataFile
             if ($depth === 0 && preg_match('/^\s*[\'"]([^\'"]+)[\'"]\s*=>/', $line, $match)) {
                 $current = $match[1];
                 $keys[] = $current;
+                $sources[$current] = [$line];
 
                 if ($blocks !== []) {
                     $comments[$current] = $this->splitComments($blocks);
@@ -194,8 +218,9 @@ class MetadataFile
                 // A comment inside an entry cannot be rendered back in place, but it documents
                 // that entry, so keep it there rather than let it drift onto the next one.
                 $comments[$current]['banner'] ??= null;
-                $comments[$current]['note'] = trim(
-                    ($comments[$current]['note'] ?? '')."\n\n".implode("\n\n", $blocks),
+                $comments[$current]['note'] ??= null;
+                $comments[$current]['inner'] = trim(
+                    ($comments[$current]['inner'] ?? '')."\n\n".implode("\n\n", $blocks),
                     "\n"
                 );
 
@@ -212,13 +237,14 @@ class MetadataFile
         // Not laid out as `return [` on a line of its own, e.g. var_export() output: keep what
         // precedes the return statement, as the comments cannot be told apart from the code.
         if (! $inBody) {
-            return ['header' => Str::before(implode("\n", $header), 'return') ?: self::HEADER, 'comments' => [], 'keys' => []];
+            return ['header' => Str::before(implode("\n", $header), 'return') ?: self::HEADER, 'comments' => [], 'keys' => [], 'sources' => []];
         }
 
         return [
             'header' => implode("\n", $header),
             'comments' => $comments,
             'keys' => $keys,
+            'sources' => $sources,
         ];
     }
 
@@ -244,10 +270,10 @@ class MetadataFile
      * A note on a pruned entry leaves with it. A section banner heads everything down to the
      * next banner, so it moves to the next entry still there, and goes if its section is empty.
      *
-     * @param  array<string, array{banner: ?string, note: ?string}>  $comments
+     * @param  array<string, array{banner: ?string, note: ?string, inner?: string}>  $comments
      * @param  list<string>  $sourceKeys  Every entry in the file, in file order.
      * @param  list<string>  $keys  The entries being written.
-     * @return array<string, array{banner: ?string, note: ?string}>
+     * @return array<string, array{banner: ?string, note: ?string, inner?: string}>
      */
     protected function rehomeBanners(array $comments, array $sourceKeys, array $keys): array
     {
@@ -278,7 +304,7 @@ class MetadataFile
     /**
      * @param  list<string>  $sourceKeys
      * @param  array<string, int>  $surviving
-     * @param  array<string, array{banner: ?string, note: ?string}>  $comments
+     * @param  array<string, array{banner: ?string, note: ?string, inner?: string}>  $comments
      * @return string|null Null when the section has no entry left.
      */
     protected function nextInSection(string $key, array $sourceKeys, array $surviving, array $comments): ?string

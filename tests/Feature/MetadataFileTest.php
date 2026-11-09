@@ -367,3 +367,35 @@ it('drops the banner of a section left empty, without taking over the next secti
     expect($written)->not->toContain('First')
         ->and(strpos($written, 'Second'))->toBeLessThan(strpos($written, "'tabler.home'"));
 });
+
+describe('a locked entry', function (): void {
+    beforeEach(function (): void {
+        $this->locked = "    'tabler.home' => [\n        'locked' => true,\n        // Agreed with design.\n        'use_cases' => [\n            'one',\n            'two',\n        ],\n    ],\n";
+
+        File::ensureDirectoryExists(dirname($this->workspace->metadataPath));
+        File::put($this->workspace->metadataPath, "<?php\n\nreturn [\n\n{$this->locked}\n    'tabler.trash' => [\n        // Inner note.\n        'use_cases' => [\n            'bin',\n        ],\n    ],\n\n];\n");
+
+        $this->file = app(IconRegistry::class)->metadata();
+    });
+
+    it('keeps its exact text through a rewrite, while other entries are rendered', function (): void {
+        $this->file->write($this->file->read());
+
+        $written = File::get($this->workspace->metadataPath);
+
+        expect($written)->toContain($this->locked)
+            ->and(substr_count($written, '// Agreed with design.'))->toBe(1)
+            ->and($written)->toContain("'use_cases' => ['bin'],")
+            ->and($written)->toContain('// Inner note.');
+    });
+
+    it('is rendered when the write changes it, so the change is not lost', function (): void {
+        $metadata = $this->file->read();
+        $metadata['tabler.home']['use_cases'][] = 'three';
+
+        $this->file->write($metadata);
+
+        expect((require $this->workspace->metadataPath)['tabler.home']['use_cases'])->toBe(['one', 'two', 'three'])
+            ->and(substr_count(File::get($this->workspace->metadataPath), '// Agreed with design.'))->toBe(1);
+    });
+});

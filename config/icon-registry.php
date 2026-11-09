@@ -67,6 +67,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Generic icons
+    |--------------------------------------------------------------------------
+    |
+    | Icons used everywhere for the same mechanical reason, so the words near
+    | them describe the screen, not the icon. `icon-registry:scan --write` adds
+    | no use cases to them. Matches the icon name, ignoring a heroicons style
+    | prefix ("o-x-mark"), or the whole key if the pattern has a dot. "*" works.
+    |
+    */
+
+    'generic_icons' => [
+        'chevron-*', 'chevrons-*',
+        'arrow-up', 'arrow-down', 'arrow-left', 'arrow-right',
+        'x', 'x-mark', 'close',
+        'plus', 'minus',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Purposes
     |--------------------------------------------------------------------------
     |

@@ -50,7 +50,7 @@ php artisan icon-registry:scan --path=modules/billing/resources/views --json
 | --- | --- |
 | `--path=` | A directory to scan instead of `resources/views`, `app` and `config`. Repeatable. Relative paths start at the application root. |
 | `--json` | Print `icons` (by key, with `keywords` and `usages`), `unknown` and `dynamic` as JSON. Cannot be combined with `--write`. |
-| `--write` | After a preview and a confirmation, add each icon's keywords to the metadata file as `use_cases`, and rebuild the cache if one exists. |
+| `--write` | After a preview and a confirmation, add each icon's keywords to the metadata file as `use_cases`, and rebuild the cache if one exists. Icons in `generic_icons` and entries with `'locked' => true` are skipped; both still appear in the report. |
 | `--force` | With `--write`, skip the confirmation. |
 
 It reads `.php` and `.blade.php` files by pattern, and resolves names against the providers, not

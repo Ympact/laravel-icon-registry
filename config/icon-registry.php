@@ -45,12 +45,24 @@ return [
     | Metadata
     |--------------------------------------------------------------------------
     |
-    | Labels, aliases and use cases that make icons findable, keyed by icon key.
+    | Labels and aliases that make icons findable, keyed by icon key.
     | The file is part of the application and belongs in version control.
     |
     */
 
     'metadata' => resource_path('icons/metadata.php'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Purposes
+    |--------------------------------------------------------------------------
+    |
+    | What icons mean in this application, keyed by purpose: the one icon that
+    | stands for it and its accessible label. Part of the application too.
+    |
+    */
+
+    'purposes' => resource_path('icons/purposes.php'),
 
     /*
     |--------------------------------------------------------------------------

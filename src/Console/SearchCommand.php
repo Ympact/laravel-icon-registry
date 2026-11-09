@@ -72,8 +72,8 @@ class SearchCommand extends Command
             options: fn (string $value) => $value === ''
                 ? []
                 : $this->results($registry, $value)->mapWithKeys(fn (Icon $icon) => [$icon->key => $this->promptLabel($icon)])->all(),
-            placeholder: 'Type an icon name, alias or use case...',
-            hint: 'Searches icon key, vendor, label, aliases and use cases.',
+            placeholder: 'Type an icon name, alias or purpose...',
+            hint: 'Searches icon key, vendor, label, aliases and purposes.',
         );
 
         $icon = $registry->find((string) $selected, (bool) $this->option('fresh'));
@@ -101,7 +101,7 @@ class SearchCommand extends Command
             ['Reference', $icon->reference],
             ['Path', $icon->path ?? ''],
             ['Aliases', implode(', ', $icon->aliases)],
-            ['Use cases', implode(', ', $icon->useCases)],
+            ['Purposes', implode(', ', $icon->purposes)],
         ]);
 
         note('Store the registry key, not the reference.');
@@ -120,13 +120,13 @@ class SearchCommand extends Command
         }
 
         table(
-            ['Key', 'Provider', 'Label', 'Aliases', 'Use cases'],
+            ['Key', 'Provider', 'Label', 'Aliases', 'Purposes'],
             $results->map(fn (Icon $icon) => [
                 $icon->key,
                 $icon->provider,
                 $icon->label,
                 implode(', ', $icon->aliases),
-                implode(', ', $icon->useCases),
+                implode(', ', $icon->purposes),
             ])->all()
         );
 

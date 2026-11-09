@@ -49,7 +49,7 @@ it('keeps the header and section comments when it rewrites the file', function (
             // Used for both the row action and the bulk action.
             'tabler.trash' => [
                 'label' => 'Verwijderen',
-                'use_cases' => ['action.delete'],
+                'aliases' => ['prullenbak'],
             ],
         PHP);
 
@@ -76,7 +76,6 @@ it('is a fixed point: rewriting twice changes nothing', function (): void {
             'tabler.home' => [
                 'label' => 'Home',
                 'aliases' => ['huis', 'start'],
-                'use_cases' => ['navigation.home'],
             ],
         PHP);
 

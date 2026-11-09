@@ -49,6 +49,42 @@ Drawing a key that no provider lists throws `Ympact\IconRegistry\Exceptions\Unkn
 and Blade Icons do for an unknown icon. Validate keys when they are saved, and run
 `icon-registry:doctor` in CI to catch icons removed after that.
 
+## Draw by purpose
+
+A purpose says what an icon means in your application, so the same icon is used everywhere that
+meaning appears. Define each one in `resources/icons/purposes.php`, which belongs in version
+control:
+
+```php
+return [
+    'action.delete' => ['icon' => 'tabler.trash', 'label' => 'Delete'],
+    'status.overdue' => ['icon' => 'tabler.alert-circle', 'label' => 'icons.overdue'],
+];
+```
+
+An icon can serve several purposes, and each purpose has exactly one icon and one label. The label
+goes through `__()`, so it can be text or a translation key.
+
+```blade
+<x-icon-registry::icon purpose="action.delete" class="size-5" />
+<x-icon-registry::icon purpose="status.overdue" labelled />
+```
+
+```php
+Icons::purpose('action.delete');                             // the Icon
+Icons::renderPurpose('status.overdue', ['labelled' => true]);
+```
+
+A purpose is decorative like any icon, because next to visible text a name would be announced
+twice. `labelled` names it with the purpose's label; `label` replaces that when the context says
+more ("Delete invoice"). When both `purpose` and `icon` are given, `purpose` is drawn.
+
+An undefined purpose throws `Ympact\IconRegistry\Exceptions\UnknownPurpose`. `icon-registry:doctor`
+fails on a purpose whose icon no longer exists.
+
+Drawing reads the purposes file directly, so changing a purpose's icon needs no cache rebuild.
+Search does use the cached purposes: run `icon-registry:cache` to make it find the change.
+
 ## Accessibility
 
 An icon is decorative unless you give it an accessible name, so it renders with
@@ -72,7 +108,7 @@ Icons::render('tabler.alert-circle', ['label' => __('Overdue')]);
 | `role` or `aria-hidden`, without a label | as given |
 
 The registry does not fall back to the icon's metadata label: that names the picture ("Trash"),
-not what it means where you use it ("Delete invoice"). In an icon-only button the icon stays
+not what it means where you use it ("Delete invoice"); a [purpose](#draw-by-purpose) holds that. In an icon-only button the icon stays
 decorative and the button takes the name:
 
 ```blade

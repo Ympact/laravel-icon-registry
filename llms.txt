@@ -1,7 +1,7 @@
 # ympact/laravel-icon-registry
 
 > A Laravel package that catalogues the icons an application can draw (Flux, Blade Icons, custom
-> providers), searches them by name, label, alias and use case, validates stored icon keys and
+> providers), searches them by name, label, alias and purpose, validates stored icon keys and
 > draws them.
 
 **Supports:** PHP 8.3+, Laravel 12 and 13
@@ -22,7 +22,8 @@ search, a validation rule, a Blade component and a cache. It has no UI.
 - **Provider**: lists and draws icons. Built in: `flux` (needs livewire/flux), `blade-icons`
   (needs blade-ui-kit/blade-icons). Unavailable providers are skipped. First configured wins on a
   duplicate key.
-- **Metadata**: `resources/icons/metadata.php`, keyed by icon key: `label`, `aliases`, `use_cases`.
+- **Metadata**: `resources/icons/metadata.php`, keyed by icon key: `label`, `aliases`.
+- **Purpose**: `resources/icons/purposes.php`, one icon and label per meaning: `'action.delete' => ['icon' => 'tabler.trash', 'label' => 'Delete']`.
 
 ---
 
@@ -44,11 +45,14 @@ Icons::search('trash', vendor: 'tabler', limit: 20);   // Collection<int, Icon>
 Icons::find('tabler.trash');                          // ?Icon
 Icons::vendors();
 Icons::render('tabler.trash', ['class' => 'size-5']); // Htmlable; throws UnknownIcon
+Icons::purpose('action.delete');                      // Icon; throws UnknownPurpose
+Icons::renderPurpose('action.delete', ['labelled' => true]); // Htmlable, named with the purpose's label
 ```
 
 ```blade
 <x-icon-registry::icon :icon="$model->icon" class="size-5" />                {{-- decorative: aria-hidden="true" --}}
 <x-icon-registry::icon :icon="$model->icon" class="size-5" :label="__('Delete')" /> {{-- role="img" with aria-label --}}
+<x-icon-registry::icon purpose="action.delete" class="size-5" />          {{-- decorative; add `labelled` to name it --}}
 ```
 
 ---

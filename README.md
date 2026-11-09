@@ -19,8 +19,9 @@ $request->validate(['icon' => ['nullable', new IconExists]]);
 - **Providers** for [Flux](https://fluxui.dev) (its own icons, your `resources/views/flux/icon`, and
   everything built there by [ympact/flux-icons](https://github.com/Ympact/flux-icons)) and for every
   [Blade Icons](https://github.com/blade-ui-kit/blade-icons) set. Both optional, and you can add your own.
-- **Scored search** over names, labels, aliases and use cases, with typo tolerance.
+- **Scored search** over names, labels, aliases and purposes, with typo tolerance.
 - **A metadata file** for labels and aliases, which the doctor command prunes without losing your comments.
+- **Purposes**: one icon and label per meaning (`action.delete`), so similar actions look the same across your app.
 - **An `IconExists` rule** that suggests the closest icon.
 - **A cache** that `php artisan optimize` builds.
 

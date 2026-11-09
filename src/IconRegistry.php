@@ -13,10 +13,11 @@ use Illuminate\View\ComponentAttributeBag;
 use InvalidArgumentException;
 use Ympact\IconRegistry\Contracts\IconProvider;
 use Ympact\IconRegistry\Exceptions\UnknownIcon;
+use Ympact\IconRegistry\Exceptions\UnknownPurpose;
 
 /**
  * The catalogue of every icon the configured providers can draw, merged with the application's
- * metadata and searchable by key, label, alias and use case. Bound scoped, so it holds the set
+ * metadata and searchable by key, label, alias and purpose. Bound scoped, so it holds the set
  * for one request or job.
  */
 class IconRegistry
@@ -28,6 +29,9 @@ class IconRegistry
      * @var Collection<int, Icon>|null
      */
     protected ?Collection $memoized = null;
+
+    /** @var Collection<string, Purpose>|null */
+    protected ?Collection $purposes = null;
 
     /** @var array<string, IconProvider>|null */
     protected ?array $providers = null;
@@ -107,14 +111,64 @@ class IconRegistry
      */
     public function render(string $key, ComponentAttributeBag|array $attributes = []): Htmlable
     {
-        $icon = $this->find($key) ?? $this->find($key, fresh: true) ?? throw UnknownIcon::key($key);
+        $icon = $this->resolve($key);
 
-        // A bag holds values Blade already sanitized and prints them raw, so an array must match.
-        $attributes = is_array($attributes)
-            ? new ComponentAttributeBag(array_map(BladeCompiler::sanitizeComponentAttribute(...), $attributes))
-            : $attributes;
+        return $this->provider($icon->provider)->render($icon, $this->withAccessibility($this->bag($attributes)));
+    }
 
-        return $this->provider($icon->provider)->render($icon, $this->withAccessibility($attributes));
+    /**
+     * What icons mean in this application, by purpose name. Read from the purposes file rather
+     * than the cache, so changing the icon of a purpose takes effect without a rebuild.
+     *
+     * @return Collection<string, Purpose>
+     *
+     * @throws InvalidArgumentException when an entry lacks an icon or a label.
+     */
+    public function purposes(): Collection
+    {
+        if ($this->purposes !== null) {
+            return $this->purposes;
+        }
+
+        $path = $this->config->string('icon-registry.purposes');
+
+        /** @var array<string, mixed> $entries */
+        $entries = $this->files->exists($path) ? $this->files->getRequire($path) : [];
+
+        return $this->purposes = collect($entries)->map(fn (mixed $entry, string $name) => Purpose::fromEntry($name, $entry));
+    }
+
+    /**
+     * The icon that stands for a purpose.
+     *
+     * @throws UnknownPurpose when the purpose is not defined.
+     * @throws UnknownIcon when its icon no longer exists.
+     */
+    public function purpose(string $name): Icon
+    {
+        return $this->resolve($this->definedPurpose($name)->icon);
+    }
+
+    /**
+     * Draws the icon of a purpose, decorative unless `labelled` asks for the purpose's label.
+     * An explicit `label` wins, for when the context says more than the purpose does.
+     *
+     * @param  ComponentAttributeBag|array<string, mixed>  $attributes
+     *
+     * @throws UnknownPurpose when the purpose is not defined.
+     * @throws UnknownIcon when its icon no longer exists.
+     */
+    public function renderPurpose(string $name, ComponentAttributeBag|array $attributes = []): Htmlable
+    {
+        $purpose = $this->definedPurpose($name);
+        $attributes = $this->bag($attributes);
+        $given = $attributes->except('labelled')->getAttributes();
+
+        if ($attributes->get('labelled') && blank($given['label'] ?? null)) {
+            $given['label'] = BladeCompiler::sanitizeComponentAttribute(__($purpose->label));
+        }
+
+        return $this->render($purpose->icon, new ComponentAttributeBag($given));
     }
 
     /**
@@ -127,9 +181,22 @@ class IconRegistry
     {
         $metadata = $this->metadata()->read();
 
+        $this->purposes = null;
+        $purposes = [];
+
+        foreach ($this->purposes() as $purpose) {
+            $purposes[$purpose->icon][] = $purpose->name;
+        }
+
         return $this->discover()
             ->unique('key')
-            ->map(fn (array $found) => $this->makeIcon($found['provider'], $found['key'], $found['icon'], $metadata))
+            ->map(fn (array $found) => $this->makeIcon(
+                $found['provider'],
+                $found['key'],
+                $found['icon'],
+                $metadata,
+                $purposes[$found['key']] ?? [],
+            ))
             ->sortBy([['vendor', 'asc'], ['name', 'asc']])
             ->values();
     }
@@ -203,7 +270,7 @@ class IconRegistry
     /**
      * Compares the icons on disk with the metadata and the cache.
      *
-     * @return array{icon_count: int, metadata_count: int, cache_exists: bool, cache_is_fresh: bool, orphaned_metadata: list<string>, icons_without_metadata: list<string>, stale_cache_entries: list<string>, uncached_icons: list<string>, shadowed_icons: list<string>}
+     * @return array{icon_count: int, metadata_count: int, cache_exists: bool, cache_is_fresh: bool, orphaned_metadata: list<string>, icons_without_metadata: list<string>, stale_cache_entries: list<string>, uncached_icons: list<string>, shadowed_icons: list<string>, purpose_count: int, orphaned_purposes: list<string>}
      */
     public function validate(): array
     {
@@ -222,6 +289,13 @@ class IconRegistry
             'stale_cache_entries' => $this->sorted(array_diff($cachedKeys, $freshKeys)),
             'uncached_icons' => $this->sorted(array_diff($freshKeys, $cachedKeys)),
             'shadowed_icons' => $this->shadowedKeys(),
+            'purpose_count' => $this->purposes()->count(),
+            'orphaned_purposes' => $this->sorted(
+                $this->purposes()
+                    ->reject(fn (Purpose $purpose) => in_array($purpose->icon, $freshKeys, true))
+                    ->keys()
+                    ->all()
+            ),
         ];
     }
 
@@ -254,6 +328,34 @@ class IconRegistry
             'metadata' => $cleaned,
             'written' => $write,
         ];
+    }
+
+    /**
+     * @throws UnknownIcon when no provider lists the key.
+     */
+    protected function resolve(string $key): Icon
+    {
+        return $this->find($key) ?? $this->find($key, fresh: true) ?? throw UnknownIcon::key($key);
+    }
+
+    /**
+     * @throws UnknownPurpose when the purpose is not defined.
+     */
+    protected function definedPurpose(string $name): Purpose
+    {
+        return $this->purposes()->get($name) ?? throw UnknownPurpose::named($name);
+    }
+
+    /**
+     * A bag holds values Blade already sanitized and prints them raw, so an array must match.
+     *
+     * @param  ComponentAttributeBag|array<string, mixed>  $attributes
+     */
+    protected function bag(ComponentAttributeBag|array $attributes): ComponentAttributeBag
+    {
+        return is_array($attributes)
+            ? new ComponentAttributeBag(array_map(BladeCompiler::sanitizeComponentAttribute(...), $attributes))
+            : $attributes;
     }
 
     /**
@@ -334,14 +436,14 @@ class IconRegistry
 
     /**
      * @param  array<string, array<string, mixed>>  $metadata
+     * @param  list<string>  $purposes
      */
-    protected function makeIcon(string $provider, string $key, DiscoveredIcon $found, array $metadata): Icon
+    protected function makeIcon(string $provider, string $key, DiscoveredIcon $found, array $metadata, array $purposes): Icon
     {
         $meta = $metadata[$key] ?? [];
 
         $label = (string) ($meta['label'] ?? Str::headline($found->name));
         $aliases = array_values($meta['aliases'] ?? []);
-        $useCases = array_values($meta['use_cases'] ?? []);
 
         return new Icon(
             key: $key,
@@ -352,8 +454,8 @@ class IconRegistry
             reference: $found->reference,
             path: $found->path,
             aliases: $aliases,
-            useCases: $useCases,
-            terms: $this->search->termsFor($key, $found->vendor, $found->name, $label, $aliases, $useCases),
+            purposes: $purposes,
+            terms: $this->search->termsFor($key, $found->vendor, $found->name, $label, $aliases, $purposes),
         );
     }
 

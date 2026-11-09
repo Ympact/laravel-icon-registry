@@ -7,7 +7,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
 /**
- * The application's icon metadata file: labels, aliases and use cases keyed by icon key. It is
+ * The application's icon metadata file: labels and aliases keyed by icon key. It is
  * rewritten by hand rather than with var_export(), so its header and the comments documenting
  * each entry survive a rewrite.
  */
@@ -32,7 +32,7 @@ class MetadataFile
         PHP;
 
     /** The fields the registry reads; anything else in an entry is carried through untouched. */
-    protected const KNOWN_FIELDS = ['label', 'aliases', 'use_cases'];
+    protected const KNOWN_FIELDS = ['label', 'aliases'];
 
     public function __construct(
         protected Filesystem $files,
@@ -69,7 +69,6 @@ class MetadataFile
         return array_filter([
             'label' => $label,
             'aliases' => $this->normalizeList($entry['aliases'] ?? []),
-            'use_cases' => $this->normalizeList($entry['use_cases'] ?? []),
             ...Arr::except($entry, self::KNOWN_FIELDS),
         ], fn (mixed $value) => filled($value));
     }

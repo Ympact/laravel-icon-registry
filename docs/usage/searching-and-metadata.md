@@ -16,7 +16,7 @@ the icon somewhere: "bestand verwijderen" finds an icon labelled "Bestand verwij
 that only matches "verwijderen". Results are ordered by how well they matched:
 
 - an exact word beats a prefix, and a prefix beats a match inside a word;
-- a match on the label or the icon's own name beats one on an alias, which beats one on a use case;
+- a match on the label or the icon's own name beats one on an alias, which beats one on a [purpose](storing-and-drawing-icons.md#draw-by-purpose);
 - typing the icon's name or vendor ("tabler home") breaks ties in that icon's favour.
 
 Only when nothing matches outright does search fall back to typo tolerance: one edit for a word
@@ -40,7 +40,6 @@ return [
     'tabler.trash' => [
         'label' => 'Verwijderen',
         'aliases' => ['delete', 'prullenbak'],
-        'use_cases' => ['action.delete'],
     ],
 
 ];
@@ -50,7 +49,6 @@ return [
 | --- | --- |
 | `label` | The name shown for the icon; it defaults to the icon name as a headline ("Device Floppy"). |
 | `aliases` | Other words for the icon. |
-| `use_cases` | Where the application uses it, such as `action.delete`. Searchable, at a lower weight. |
 
 Other fields are kept as they are but not searched.
 

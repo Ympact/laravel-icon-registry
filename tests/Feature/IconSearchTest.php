@@ -17,7 +17,6 @@ beforeEach(function (): void {
             'tabler.trash' => [
                 'label' => 'Verwijderen',
                 'aliases' => ['delete', 'prullenbak'],
-                'use_cases' => ['action.delete'],
             ],
             'heroicons.trash' => [
                 'label' => 'Verwijderen',
@@ -35,12 +34,15 @@ beforeEach(function (): void {
             'tabler.home' => [
                 'label' => 'Woonfunctie',
                 'aliases' => ['huis', 'woning'],
-                'use_cases' => ['geodata.gebruiksdoel.woonfunctie'],
             ],
             'tabler.device-floppy' => [
                 'label' => 'Opslaan',
                 'aliases' => ['save', 'bewaren'],
             ],
+        ])
+        ->purposes([
+            'action.delete' => ['icon' => 'tabler.trash', 'label' => 'Delete'],
+            'geodata.gebruiksdoel.woonfunctie' => ['icon' => 'tabler.home', 'label' => 'Woonfunctie'],
         ]);
 
     $this->keys = fn (string $query, ?string $vendor = null): array => app(IconRegistry::class)
@@ -65,7 +67,7 @@ it('requires every token to match, in any order', function (): void {
         ->and(($this->keys)('opslaan verwijderen'))->toBe([]);
 });
 
-it('searches aliases and use cases, not just the label', function (): void {
+it('searches aliases and purposes, not just the label', function (): void {
     expect(($this->keys)('prullenbak'))->toBe(['tabler.trash'])
         ->and(($this->keys)('woonfunctie'))->toContain('tabler.home')
         ->and(($this->keys)('gebruiksdoel'))->toBe(['tabler.home']);

@@ -9,7 +9,7 @@ All notable changes to this package are documented here. The format follows
 ### Added
 
 - `IconRegistry`, a catalogue of the icons the configured providers can draw, with scored search
-  over name, label, alias and use case, and typo tolerance as a fallback. Bound scoped, so it holds
+  over name, label, alias and purpose, and typo tolerance as a fallback. Bound scoped, so it holds
   the icon set for one request or job.
 - Providers for Flux (its own icons, and loose files and vendor directories in
   `resources/views/flux/icon`) and for every Blade Icons set. Both are optional; a provider whose
@@ -25,8 +25,12 @@ All notable changes to this package are documented here. The format follows
 - The `IconExists` validation rule, with `vendor()` and `provider()` constraints and a suggestion for
   the closest icon. When the cache predates an icon, it checks the providers before failing.
   Messages in English and Dutch.
-- A metadata file for labels, aliases and use cases. Rewriting it keeps the header, section
+- A metadata file for labels and aliases. Rewriting it keeps the header, section
   banners and the comment above each entry.
+- Purposes: `resources/icons/purposes.php` maps a meaning such as `action.delete` to one icon and an
+  accessible label. Draw one with `<x-icon-registry::icon purpose="...">` or `renderPurpose()`, decorative
+  unless `labelled`. `purposes()` lists them, `purpose()` returns the icon, an undefined purpose throws
+  `UnknownPurpose`, and `icon-registry:doctor` fails on a purpose whose icon no longer exists.
 - `icon-registry:cache`, `icon-registry:clear`, `icon-registry:doctor` and `icon-registry:search`.
   Named apart from Blade Icons' own `icons:cache` and `icons:clear`. `php artisan optimize` builds
   the cache and `optimize:clear` removes it.
@@ -36,6 +40,8 @@ All notable changes to this package are documented here. The format follows
 This package grew out of the registry in an application of ours. Compared with that one:
 
 - The commands were `icons:*`; they are `icon-registry:*`.
+- Metadata `use_cases` are gone: move them to the purposes file, where each purpose has one icon. A
+  leftover `use_cases` field is kept in the metadata file but no longer searched.
 - The config key was `icons`, with a list of source paths; it is `icon-registry`, with providers.
 - Rewriting a metadata file whose `return [` is not on a line of its own (such as `var_export()`
   output) used to keep the old `return` statement in the header, so the file went on returning the

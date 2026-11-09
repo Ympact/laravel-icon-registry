@@ -28,7 +28,7 @@ class IconSearch
 
     protected const WEIGHT_VENDOR = 70;
 
-    protected const WEIGHT_USE_CASE = 55;
+    protected const WEIGHT_PURPOSE = 55;
 
     /** A word taken out of a longer phrase, as a percentage of the phrase's weight. */
     protected const WEIGHT_PHRASE_PART = 85;
@@ -41,10 +41,10 @@ class IconSearch
     /**
      * The terms a query is matched against, flattened once at build time so a keystroke never
      * re-splits strings. A hit on the label or the icon's own name outweighs one on an alias,
-     * and that one outweighs a use case.
+     * and that one outweighs a purpose.
      *
      * @param  list<string>  $aliases
-     * @param  list<string>  $useCases
+     * @param  list<string>  $purposes
      * @return array<string, int>
      */
     public function termsFor(
@@ -53,7 +53,7 @@ class IconSearch
         string $name,
         string $label,
         array $aliases,
-        array $useCases,
+        array $purposes,
     ): array {
         $sources = [
             [$key, self::WEIGHT_NAME],
@@ -61,7 +61,7 @@ class IconSearch
             [$label, self::WEIGHT_LABEL],
             [$vendor, self::WEIGHT_VENDOR],
             ...array_map(fn (string $alias) => [$alias, self::WEIGHT_ALIAS], $aliases),
-            ...array_map(fn (string $useCase) => [$useCase, self::WEIGHT_USE_CASE], $useCases),
+            ...array_map(fn (string $purpose) => [$purpose, self::WEIGHT_PURPOSE], $purposes),
         ];
 
         $terms = [];

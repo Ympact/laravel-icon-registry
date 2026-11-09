@@ -17,7 +17,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
      * @param  string  $key  "<vendor>.<name>", unique across providers; the value to store.
      * @param  string  $reference  What the provider's component expects, e.g. "home" or "heroicon-o-home".
      * @param  list<string>  $aliases
-     * @param  list<string>  $useCases
+     * @param  list<string>  $purposes  The application purposes this icon stands for.
      * @param  array<string, int>  $terms  Lower-cased search terms, each weighted by where it came from.
      */
     public function __construct(
@@ -29,7 +29,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
         public string $reference,
         public ?string $path = null,
         public array $aliases = [],
-        public array $useCases = [],
+        public array $purposes = [],
         public array $terms = [],
     ) {}
 
@@ -44,7 +44,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
     }
 
     /**
-     * @return array{key: string, vendor: string, name: string, label: string, provider: string, reference: string, path: string|null, aliases: list<string>, use_cases: list<string>, terms: array<string, int>}
+     * @return array{key: string, vendor: string, name: string, label: string, provider: string, reference: string, path: string|null, aliases: list<string>, purposes: list<string>, terms: array<string, int>}
      */
     public function toArray(): array
     {
@@ -57,7 +57,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
             'reference' => $this->reference,
             'path' => $this->path,
             'aliases' => $this->aliases,
-            'use_cases' => $this->useCases,
+            'purposes' => $this->purposes,
             'terms' => $this->terms,
         ];
     }

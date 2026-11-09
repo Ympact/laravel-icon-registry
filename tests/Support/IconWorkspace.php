@@ -16,6 +16,8 @@ class IconWorkspace
 
     public readonly string $metadataPath;
 
+    public readonly string $purposesPath;
+
     public readonly string $cachePath;
 
     public function __construct()
@@ -23,11 +25,13 @@ class IconWorkspace
         $this->root = sys_get_temp_dir().'/icon-registry-'.uniqid('', true);
         $this->fluxPath = $this->root.'/views/flux/icon';
         $this->metadataPath = $this->root.'/icons/metadata.php';
+        $this->purposesPath = $this->root.'/icons/purposes.php';
         $this->cachePath = $this->root.'/cache/icon-registry.php';
 
         File::ensureDirectoryExists($this->fluxPath);
 
         config()->set('icon-registry.metadata', $this->metadataPath);
+        config()->set('icon-registry.purposes', $this->purposesPath);
         config()->set('icon-registry.cache', $this->cachePath);
         config()->set('icon-registry.providers.flux.path', $this->fluxPath);
         config()->set('icon-registry.providers.flux.flux_icons', false);
@@ -77,6 +81,22 @@ class IconWorkspace
     {
         File::ensureDirectoryExists(dirname($this->metadataPath));
         File::put($this->metadataPath, '<?php return '.var_export($metadata, true).';');
+
+        return $this;
+    }
+
+    /**
+     * @param  array<string, mixed>  $purposes
+     */
+    public function purposes(array $purposes): self
+    {
+        File::ensureDirectoryExists(dirname($this->purposesPath));
+        File::put($this->purposesPath, '<?php return '.var_export($purposes, true).';');
+
+        // A test may rewrite the file after reading it, within opcache's revalidate window.
+        if (function_exists('opcache_invalidate')) {
+            opcache_invalidate($this->purposesPath, true);
+        }
 
         return $this;
     }

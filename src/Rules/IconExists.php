@@ -36,20 +36,26 @@ class IconExists implements ValidationRule
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (! is_string($value) || trim($value) === '') {
-            // Whether empty is allowed is `required`/`nullable`'s business.
+        // Whether empty is allowed is `required`/`nullable`'s business.
+        if ($value === null || (is_string($value) && trim($value) === '')) {
+            return;
+        }
+
+        if (! is_string($value)) {
+            $fail('icon-registry::validation.missing')->translate();
+
             return;
         }
 
         $registry = app(IconRegistry::class);
-        $key = trim($value);
 
+        // The value is checked as given, not trimmed: it is stored as given, and must draw later.
         // A cache written before the icon was built would reject a good key, so confirm on disk before failing.
-        if ($this->matches($registry->find($key)) || $this->matches($registry->find($key, fresh: true))) {
+        if ($this->matches($registry->find($value)) || $this->matches($registry->find($value, fresh: true))) {
             return;
         }
 
-        $suggestion = $registry->search($key, vendor: $this->vendor, limit: 1, provider: $this->provider)->first();
+        $suggestion = $registry->search($value, vendor: $this->vendor, limit: 1, provider: $this->provider)->first();
 
         $fail($suggestion === null
             ? 'icon-registry::validation.missing'

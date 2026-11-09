@@ -23,7 +23,7 @@ use Ympact\IconRegistry\Exceptions\UnknownPurpose;
 class IconRegistry
 {
     /** Bump when Icon::toArray() changes shape, so an older cache is rebuilt instead of misread. */
-    protected const CACHE_VERSION = 2;
+    protected const CACHE_VERSION = 3;
 
     /** Bump with SUPPORTED_MANIFEST_VERSION in editors/vscode/src/manifest.ts. */
     protected const EDITOR_MANIFEST_VERSION = 1;
@@ -127,6 +127,7 @@ class IconRegistry
 
     /**
      * Icons matching every token of the query, best first; an empty query lists in label order.
+     * Hidden icons are left out.
      *
      * @return Collection<int, Icon>
      */
@@ -137,7 +138,8 @@ class IconRegistry
         bool $fresh = false,
         ?string $provider = null,
     ): Collection {
-        $icons = array_filter($this->icons($fresh)->all(), fn (Icon $icon) => ($vendor === null || $icon->vendor === $vendor)
+        $icons = array_filter($this->icons($fresh)->all(), fn (Icon $icon) => ! $icon->hidden
+            && ($vendor === null || $icon->vendor === $vendor)
             && ($provider === null || $icon->provider === $provider));
 
         return collect($this->search->search($icons, $query, $limit));
@@ -315,15 +317,15 @@ class IconRegistry
     }
 
     /**
-     * Writes the icons editor extensions complete from. Always a fresh scan: the point is to
-     * offer an icon as soon as it exists, whatever the cache holds.
+     * Writes the icons editor extensions complete from, leaving out hidden ones. Always a fresh
+     * scan: the point is to offer an icon as soon as it exists, whatever the cache holds.
      *
      * @return int The number of icons written.
      */
     public function writeEditorManifest(?string $path = null): int
     {
         $path ??= $this->editorManifestPath();
-        $icons = $this->build();
+        $icons = $this->build()->reject(fn (Icon $icon) => $icon->hidden)->values();
 
         $this->files->ensureDirectoryExists(dirname($path));
         $this->files->replace($path, json_encode([
@@ -558,6 +560,7 @@ class IconRegistry
             purposes: $purposes,
             terms: $terms,
             searchText: implode("\n", array_keys($terms)),
+            hidden: (bool) ($meta['hidden'] ?? false),
         );
     }
 

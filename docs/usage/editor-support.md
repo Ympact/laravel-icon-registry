@@ -26,7 +26,8 @@ code --install-extension laravel-icon-registry-0.1.0.vsix
 
 An editor cannot run the registry directly, so `php artisan icon-registry:export` writes the icons
 to a JSON file, the `editor_manifest` path. Laravel's `bootstrap/cache` is ignored by Git by
-default, so the file stays out of your repository.
+default, so the file stays out of your repository. Icons marked `hidden` in the metadata are left
+out, so they are not offered.
 
 In a trusted workspace the extension runs that command when the file is missing and when your Flux
 icons, metadata or config change. In an untrusted workspace it never runs PHP. Set
@@ -57,7 +58,8 @@ The manifest is plain JSON, so other editors can use it. Its format:
             "path": "/app/resources/views/flux/icon/tabler/trash.blade.php",
             "aliases": ["delete"],
             "use_cases": ["action.delete"],
-            "purposes": ["action.delete"]
+            "purposes": ["action.delete"],
+            "hidden": false
         }
     ]
 }

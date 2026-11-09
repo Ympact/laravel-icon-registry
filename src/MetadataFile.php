@@ -31,7 +31,7 @@ class MetadataFile
 
         PHP;
 
-    /** The fields the registry reads; anything else in an entry is carried through untouched. */
+    /** The fields normalised here; anything else in an entry, such as `hidden`, is carried through untouched. */
     protected const KNOWN_FIELDS = ['label', 'aliases', 'use_cases'];
 
     public function __construct(

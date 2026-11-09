@@ -22,7 +22,7 @@ search, a validation rule, a Blade component and a cache. It has no UI.
 - **Provider**: lists and draws icons. Built in: `flux` (needs livewire/flux), `blade-icons`
   (needs blade-ui-kit/blade-icons). Unavailable providers are skipped. First configured wins on a
   duplicate key.
-- **Metadata**: `resources/icons/metadata.php`, keyed by icon key: `label`, `aliases`, `use_cases`, and `locked` to keep `icon-registry:scan --write` from adding to the entry (as the `generic_icons` config does for icons such as chevrons).
+- **Metadata**: `resources/icons/metadata.php`, keyed by icon key: `label`, `aliases`, `use_cases`, `hidden` to leave an icon out of search and editor completion while it still draws and validates, and `locked` to keep `icon-registry:scan --write` from adding to the entry (as the `generic_icons` config does for icons such as chevrons).
 - **Purpose**: `resources/icons/purposes.php`, one icon and label per meaning: `'action.delete' => ['icon' => 'tabler.trash', 'label' => 'Delete']`.
 
 ---

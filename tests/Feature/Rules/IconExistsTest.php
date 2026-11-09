@@ -77,3 +77,10 @@ it('rejects a value that is not a string', function (): void {
 it('rejects a key with surrounding whitespace, which could not be drawn once stored', function (): void {
     expect(($this->errorFor)(' tabler.trash '))->toContain('tabler.trash');
 });
+
+it('accepts a hidden icon, but never suggests one', function (): void {
+    $this->workspace->metadata(['tabler.trash' => ['hidden' => true]]);
+
+    expect(($this->errorFor)('tabler.trash'))->toBe('')
+        ->and(($this->errorFor)('tabler.trahs'))->not->toContain('tabler.trash');
+});

@@ -8,6 +8,9 @@ All notable changes to this package are documented here. The format follows
 
 ### Added
 
+- A `hidden` flag on a metadata entry. A hidden icon is left out of `search()`, `icon-registry:search`,
+  the `IconExists` suggestion and the editor manifest, and still draws and passes `IconExists`.
+  `Icon::$hidden` exposes it.
 - The `generic_icons` config key: icons such as chevrons and close buttons that `icon-registry:scan --write`
   adds no use cases to, because the words near them describe the screen. They are still reported.
 - A `locked` flag on a metadata entry, which `icon-registry:scan --write` never adds to. Rewrites of
@@ -18,6 +21,8 @@ All notable changes to this package are documented here. The format follows
 - With the default `generic_icons`, `icon-registry:scan --write` no longer suggests use cases for
   chevrons, directional arrows, `x`, `x-mark`, `close`, `plus` and `minus`. Use cases already in the
   file are not removed.
+- The cache format changed for `Icon::$hidden`. An existing cache is ignored, and the registry reads
+  the providers on each request, until `php artisan icon-registry:cache` or `optimize` rebuilds it.
 - `AddIconUseCases::handle()` returns the number of entries written instead of `void`, so a subclass
   overriding it must update its signature.
 

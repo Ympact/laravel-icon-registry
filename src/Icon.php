@@ -21,6 +21,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
      * @param  list<string>  $purposes  The application purposes this icon stands for.
      * @param  array<string, int>  $terms  Lower-cased search terms, each weighted by where it came from.
      * @param  string  $searchText  The terms joined, so search can discard a non-match in one comparison.
+     * @param  bool  $hidden  Left out of search and editor completion; still drawn and validated.
      */
     public function __construct(
         public string $key,
@@ -35,6 +36,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
         public array $purposes = [],
         public array $terms = [],
         public string $searchText = '',
+        public bool $hidden = false,
     ) {}
 
     /**
@@ -57,6 +59,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
             purposes: $record['purposes'],
             terms: $record['terms'],
             searchText: $record['search_text'],
+            hidden: $record['hidden'],
         );
     }
 
@@ -72,7 +75,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
     }
 
     /**
-     * @return array{key: string, vendor: string, name: string, label: string, provider: string, reference: string, path: string|null, aliases: list<string>, use_cases: list<string>, purposes: list<string>, terms: array<string, int>, search_text: string}
+     * @return array{key: string, vendor: string, name: string, label: string, provider: string, reference: string, path: string|null, aliases: list<string>, use_cases: list<string>, purposes: list<string>, terms: array<string, int>, search_text: string, hidden: bool}
      */
     public function toArray(): array
     {
@@ -89,6 +92,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
             'purposes' => $this->purposes,
             'terms' => $this->terms,
             'search_text' => $this->searchText,
+            'hidden' => $this->hidden,
         ];
     }
 

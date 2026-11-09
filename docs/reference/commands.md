@@ -29,8 +29,8 @@ icon yourself.
 
 ## `icon-registry:export`
 
-Writes the JSON manifest that editor extensions complete from, always from a fresh scan. See
-[Editor support](../usage/editor-support.md).
+Writes the JSON manifest that editor extensions complete from, always from a fresh scan. Icons
+marked `hidden` in the metadata are left out. See [Editor support](../usage/editor-support.md).
 
 | Option | Effect |
 | --- | --- |
@@ -60,6 +60,7 @@ for what it recognises. It exits successfully even when it reports unknown icons
 ## `icon-registry:search`
 
 Searches the registry. Without a query it opens an interactive search; with one it prints a table.
+Icons marked `hidden` in the metadata are not listed.
 
 ```bash
 php artisan icon-registry:search

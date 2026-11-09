@@ -180,3 +180,57 @@ it('does not make the files it generates executable', function (): void {
     expect(fileperms($this->workspace->cachePath) & 0777)->toBe(0666 & ~umask())
         ->and(fileperms($manifest) & 0777)->toBe(0666 & ~umask());
 });
+
+describe('a hidden icon', function (): void {
+    beforeEach(function (): void {
+        $this->workspace->metadata(['tabler.home' => ['label' => 'House', 'hidden' => true]]);
+    });
+
+    it('is left out of search, while an icon without the flag is not', function (bool $cached): void {
+        if ($cached) {
+            app(IconRegistry::class)->rebuildCache();
+            app()->forgetScopedInstances();
+        }
+
+        $registry = app(IconRegistry::class);
+
+        expect($registry->search('house')->all())->toBe([])
+            ->and($registry->search()->pluck('key')->all())->toBe(['tabler.trash'])
+            ->and($registry->search('trash')->pluck('key')->all())->toBe(['tabler.trash']);
+    })->with(['from the providers' => false, 'from the cache' => true]);
+
+    it('is still found and listed', function (): void {
+        $registry = app(IconRegistry::class);
+
+        expect($registry->find('tabler.home')?->hidden)->toBeTrue()
+            ->and($registry->find('tabler.trash')?->hidden)->toBeFalse()
+            ->and($registry->all()->pluck('key')->all())->toContain('tabler.home');
+    });
+
+    it('is still drawn', function (): void {
+        config()->set('icon-registry.providers', ['fake' => ['driver' => FakeIconProvider::class]]);
+        $this->workspace->metadata(['fake.star' => ['hidden' => true]]);
+
+        expect(app(IconRegistry::class)->render('fake.star')->toHtml())->toBe('<i data-fake="star"></i>');
+    });
+
+    it('is left out of the editor manifest', function (): void {
+        $manifest = "{$this->workspace->root}/editor.json";
+
+        expect(app(IconRegistry::class)->writeEditorManifest($manifest))->toBe(1)
+            ->and(array_column(File::json($manifest)['icons'], 'key'))->toBe(['tabler.trash']);
+    });
+
+    it('marks a cache written before the flag as stale', function (): void {
+        $this->workspace->metadata(['tabler.home' => ['label' => 'House']]);
+        app(IconRegistry::class)->rebuildCache();
+        app()->forgetScopedInstances();
+
+        $this->workspace->metadata(['tabler.home' => ['label' => 'House', 'hidden' => true]]);
+        if (function_exists('opcache_invalidate')) {
+            opcache_invalidate($this->workspace->metadataPath, true);
+        }
+
+        expect(app(IconRegistry::class)->validate()['cache_is_fresh'])->toBeFalse();
+    });
+});

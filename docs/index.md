@@ -1,12 +1,14 @@
 # Icon Registry
 
-A searchable catalogue of the icons a Laravel application can draw. Providers list the icons
-(Flux and Blade Icons ship with the package), the application adds labels and aliases in a
-metadata file, and the registry offers search, a validation rule for stored icon keys, a Blade
-component that draws a key, and a cache that `php artisan optimize` builds.
+Keep icon use consistent across a Laravel application. Providers list the icons (Flux and Blade
+Icons ship with the package), the application adds labels and aliases in a metadata file and
+decides which icon stands for which meaning in a purposes file, and the registry offers search, a
+validation rule for stored icon keys, a Blade component that draws a key or a purpose, and a cache
+that `php artisan optimize` builds.
 
-It is for applications that let people choose an icon: a menu editor, a category form, a
-status badge. The registry holds no UI; build a picker on its search API.
+It is for applications that want the same icon for the same meaning on every screen, and for those
+that let people choose an icon: a menu editor, a category form, a status badge. The registry holds
+no UI; build a picker on its search API.
 
 ## Getting started
 

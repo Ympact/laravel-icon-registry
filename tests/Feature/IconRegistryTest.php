@@ -135,9 +135,11 @@ it('reports a cache whose labels no longer match the metadata as stale', functio
     app(IconRegistry::class)->rebuildCache();
     expect(app(IconRegistry::class)->validate()['cache_is_fresh'])->toBeTrue();
 
-    touch($this->workspace->metadataPath, time() - 60);
     $this->workspace->metadata(['tabler.home' => ['label' => 'Dwelling']]);
-    opcache_invalidate($this->workspace->metadataPath, true);
+
+    if (function_exists('opcache_invalidate')) {
+        opcache_invalidate($this->workspace->metadataPath, true);
+    }
 
     expect(app(IconRegistry::class)->validate()['cache_is_fresh'])->toBeFalse();
 });

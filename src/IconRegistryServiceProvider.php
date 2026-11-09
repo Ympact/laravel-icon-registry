@@ -7,6 +7,7 @@ use Illuminate\View\Compilers\BladeCompiler;
 use Ympact\IconRegistry\Console\CacheCommand;
 use Ympact\IconRegistry\Console\ClearCommand;
 use Ympact\IconRegistry\Console\DoctorCommand;
+use Ympact\IconRegistry\Console\ExportCommand;
 use Ympact\IconRegistry\Console\SearchCommand;
 
 /**
@@ -50,6 +51,7 @@ class IconRegistryServiceProvider extends ServiceProvider
             CacheCommand::class,
             ClearCommand::class,
             DoctorCommand::class,
+            ExportCommand::class,
             SearchCommand::class,
         ]);
 

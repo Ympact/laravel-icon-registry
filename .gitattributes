@@ -3,6 +3,7 @@
 /.notes export-ignore
 /.vscode export-ignore
 /docs export-ignore
+/editors export-ignore
 /tests export-ignore
 /workbench export-ignore
 /stubs export-ignore

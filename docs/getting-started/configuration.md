@@ -13,6 +13,7 @@ package defaults.
 | `component` | `registry-icon` | The Blade tag that draws a stored key, without its `x-` prefix. Run `php artisan view:clear` after changing it. Avoid `icon` when Blade Icons is installed: it registers `<x-icon>`. |
 | `metadata` | `resource_path('icons/metadata.php')` | The application's labels, aliases and use cases, keyed by icon key. |
 | `cache` | `base_path('bootstrap/cache/icon-registry.php')` | Where `optimize` and `icon-registry:cache` write the cache. |
+| `editor_manifest` | `base_path('bootstrap/cache/icon-registry-editor.json')` | Where `icon-registry:export` writes the JSON that editor extensions read. See [Editor support](../usage/editor-support.md). |
 
 A provider whose package is not installed is skipped, so both default providers can stay listed.
 

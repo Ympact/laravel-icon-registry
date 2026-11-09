@@ -23,6 +23,9 @@ class IconRegistry
     /** Bump when Icon::toArray() changes shape, so an older cache is rebuilt instead of misread. */
     protected const CACHE_VERSION = 1;
 
+    /** Bump with SUPPORTED_MANIFEST_VERSION in editors/vscode/src/manifest.ts. */
+    protected const EDITOR_MANIFEST_VERSION = 1;
+
     /**
      * Icons for the life of the request, so a picker searching per keystroke hydrates them once.
      *
@@ -220,6 +223,32 @@ class IconRegistry
         if (function_exists('opcache_invalidate')) {
             opcache_invalidate($this->cachePath(), true);
         }
+
+        return $icons->count();
+    }
+
+    public function editorManifestPath(): string
+    {
+        return $this->config->string('icon-registry.editor_manifest');
+    }
+
+    /**
+     * Writes the icons editor extensions complete from. Always a fresh scan: the point is to
+     * offer an icon as soon as it exists, whatever the cache holds.
+     *
+     * @return int The number of icons written.
+     */
+    public function writeEditorManifest(?string $path = null): int
+    {
+        $path ??= $this->editorManifestPath();
+        $icons = $this->build();
+
+        $this->files->ensureDirectoryExists(dirname($path));
+        $this->files->replace($path, json_encode([
+            'version' => self::EDITOR_MANIFEST_VERSION,
+            'component' => $this->config->string('icon-registry.component'),
+            'icons' => $icons,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
 
         return $icons->count();
     }

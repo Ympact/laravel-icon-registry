@@ -18,6 +18,11 @@ status badge. The registry holds no UI; build a picker on its search API.
 - [Storing and drawing icons](usage/storing-and-drawing-icons.md)
 - [Searching and metadata](usage/searching-and-metadata.md)
 - [Icons built with ympact/flux-icons](usage/flux-icons.md)
+- [Editor support](usage/editor-support.md)
+
+## Examples
+
+- [Building an icon picker](examples/icon-picker.md)
 
 ## Advanced
 

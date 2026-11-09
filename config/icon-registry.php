@@ -77,4 +77,16 @@ return [
 
     'cache' => base_path('bootstrap/cache/icon-registry.php'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Editor manifest
+    |--------------------------------------------------------------------------
+    |
+    | Where `icon-registry:export` writes the JSON that editor extensions
+    | complete icon keys from. Generated, so keep it out of version control.
+    |
+    */
+
+    'editor_manifest' => base_path('bootstrap/cache/icon-registry-editor.json'),
+
 ];

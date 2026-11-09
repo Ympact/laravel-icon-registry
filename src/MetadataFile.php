@@ -98,12 +98,24 @@ class MetadataFile
         }
 
         $this->files->ensureDirectoryExists(dirname($this->path));
-        $this->files->put($this->path, rtrim($header)."\n\nreturn [\n\n".$body."];\n");
+        $this->files->replace($this->path, rtrim($header)."\n\nreturn [\n\n".$body."];\n", $this->fileMode());
 
         // Opcache would otherwise serve the previous file to a `require` within its revalidate window.
         if (function_exists('opcache_invalidate')) {
             opcache_invalidate($this->path, true);
         }
+    }
+
+    /**
+     * The file's current mode, so a rewrite shows no mode change in version control.
+     */
+    protected function fileMode(): int
+    {
+        clearstatcache(true, $this->path);
+
+        return $this->files->exists($this->path)
+            ? fileperms($this->path) & 0777
+            : 0666 & ~umask();
     }
 
     /**

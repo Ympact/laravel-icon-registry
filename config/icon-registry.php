@@ -42,6 +42,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Blade component
+    |--------------------------------------------------------------------------
+    |
+    | The tag that draws a stored key, without its "x-" prefix. Run
+    | `php artisan view:clear` after changing it. Blade Icons already
+    | registers <x-icon>, so avoid that name when Blade Icons is installed.
+    |
+    */
+
+    'component' => 'registry-icon',
+
+    /*
+    |--------------------------------------------------------------------------
     | Metadata
     |--------------------------------------------------------------------------
     |
@@ -63,5 +76,17 @@ return [
     */
 
     'cache' => base_path('bootstrap/cache/icon-registry.php'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Editor manifest
+    |--------------------------------------------------------------------------
+    |
+    | Where `icon-registry:export` writes the JSON that editor extensions
+    | complete icon keys from. Generated, so keep it out of version control.
+    |
+    */
+
+    'editor_manifest' => base_path('bootstrap/cache/icon-registry-editor.json'),
 
 ];

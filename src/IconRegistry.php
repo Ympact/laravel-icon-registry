@@ -20,13 +20,31 @@ use Ympact\IconRegistry\Exceptions\UnknownIcon;
  */
 class IconRegistry
 {
+    /** Bump when Icon::toArray() changes shape, so an older cache is rebuilt instead of misread. */
+    protected const CACHE_VERSION = 1;
+
+    /** Bump with SUPPORTED_MANIFEST_VERSION in editors/vscode/src/manifest.ts. */
+    protected const EDITOR_MANIFEST_VERSION = 1;
+
     /**
-     * Icons for the life of the request. `require` re-executes the cache file on every call,
-     * which a picker searching per keystroke would pay each time, so hold the result.
+     * Icons for the life of the request, so a picker searching per keystroke hydrates them once.
      *
      * @var Collection<int, Icon>|null
      */
     protected ?Collection $memoized = null;
+
+    /** @var array<string, Icon> */
+    protected array $byKey = [];
+
+    /**
+     * The cache file's records. Under opcache they are constant arrays in shared memory, so a
+     * page drawing a few icons costs a few objects rather than one per icon in the set.
+     *
+     * @var array<string, array<string, mixed>>|null
+     */
+    protected ?array $records = null;
+
+    protected bool $recordsRead = false;
 
     /** @var array<string, IconProvider>|null */
     protected ?array $providers = null;
@@ -49,9 +67,16 @@ class IconRegistry
             return $this->memoized;
         }
 
-        $cached = $this->readCache();
+        $records = $this->cachedRecords();
 
-        return $this->memoized = $cached ?? $this->build();
+        if ($records !== null) {
+            return $this->memoized = collect(array_map(Icon::fromArray(...), array_values($records)));
+        }
+
+        $this->memoized = $this->build();
+        $this->byKey = $this->memoized->keyBy('key')->all();
+
+        return $this->memoized;
     }
 
     /**
@@ -64,7 +89,23 @@ class IconRegistry
 
     public function find(string $key, bool $fresh = false): ?Icon
     {
-        return $this->icons($fresh)->first(fn (Icon $icon) => $icon->key === $key);
+        if ($fresh) {
+            return $this->build()->first(fn (Icon $icon) => $icon->key === $key);
+        }
+
+        if (isset($this->byKey[$key])) {
+            return $this->byKey[$key];
+        }
+
+        $records = $this->cachedRecords();
+
+        if ($records === null) {
+            $this->all();
+
+            return $this->byKey[$key] ?? null;
+        }
+
+        return isset($records[$key]) ? $this->byKey[$key] = Icon::fromArray($records[$key]) : null;
     }
 
     /**
@@ -87,11 +128,8 @@ class IconRegistry
         bool $fresh = false,
         ?string $provider = null,
     ): Collection {
-        $icons = $this->icons($fresh)
-            ->when($vendor !== null, fn (Collection $icons) => $icons->where('vendor', $vendor))
-            ->when($provider !== null, fn (Collection $icons) => $icons->where('provider', $provider))
-            ->values()
-            ->all();
+        $icons = array_filter($this->icons($fresh)->all(), fn (Icon $icon) => ($vendor === null || $icon->vendor === $vendor)
+            && ($provider === null || $icon->provider === $provider));
 
         return collect($this->search->search($icons, $query, $limit));
     }
@@ -122,11 +160,19 @@ class IconRegistry
     {
         $metadata = $this->metadata()->read();
 
-        return $this->discover()
-            ->unique('key')
-            ->map(fn (array $found) => $this->makeIcon($found['provider'], $found['key'], $found['icon'], $metadata))
-            ->sortBy([['vendor', 'asc'], ['name', 'asc']])
-            ->values();
+        // Keyed by hand: Collection::unique() compares each item with all before it, which is quadratic.
+        $unique = [];
+
+        foreach ($this->discover() as $found) {
+            $unique[$found['key']] ??= $found;
+        }
+
+        $icons = array_map(fn (array $found) => $this->makeIcon($found['provider'], $found['key'], $found['icon'], $metadata), array_values($unique));
+
+        // usort rather than a multi-column sortBy, whose data_get() per comparison dominated the build.
+        usort($icons, fn (Icon $first, Icon $second) => $first->vendor <=> $second->vendor ?: $first->name <=> $second->name);
+
+        return collect($icons);
     }
 
     /**
@@ -163,15 +209,15 @@ class IconRegistry
 
     public function rebuildCache(): int
     {
-        $this->memoized = null;
+        $this->forgetMemoized();
 
         $icons = $this->build();
 
         $this->files->ensureDirectoryExists(dirname($this->cachePath()));
-        $this->files->put(
-            $this->cachePath(),
-            "<?php\n\nreturn ".var_export($icons->all(), true).";\n"
-        );
+        $this->files->replace($this->cachePath(), "<?php\n\nreturn ".var_export([
+            'version' => self::CACHE_VERSION,
+            'icons' => $this->recordsOf($icons),
+        ], true).";\n", $this->generatedFileMode());
 
         // Opcache would otherwise serve the previous cache to the next `require` in this process.
         if (function_exists('opcache_invalidate')) {
@@ -181,12 +227,38 @@ class IconRegistry
         return $icons->count();
     }
 
+    public function editorManifestPath(): string
+    {
+        return $this->config->string('icon-registry.editor_manifest');
+    }
+
+    /**
+     * Writes the icons editor extensions complete from. Always a fresh scan: the point is to
+     * offer an icon as soon as it exists, whatever the cache holds.
+     *
+     * @return int The number of icons written.
+     */
+    public function writeEditorManifest(?string $path = null): int
+    {
+        $path ??= $this->editorManifestPath();
+        $icons = $this->build();
+
+        $this->files->ensureDirectoryExists(dirname($path));
+        $this->files->replace($path, json_encode([
+            'version' => self::EDITOR_MANIFEST_VERSION,
+            'component' => $this->config->string('icon-registry.component'),
+            'icons' => $icons,
+        ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $this->generatedFileMode());
+
+        return $icons->count();
+    }
+
     /**
      * @return bool False when there was no cache to delete.
      */
     public function clearCache(): bool
     {
-        $this->memoized = null;
+        $this->forgetMemoized();
 
         if (! $this->files->exists($this->cachePath())) {
             return false;
@@ -202,16 +274,17 @@ class IconRegistry
      */
     public function validate(): array
     {
-        $freshKeys = $this->keysOf($this->build());
+        $fresh = $this->build();
+        $freshKeys = $this->keysOf($fresh);
         $metadataKeys = array_keys($this->metadata()->read());
         $cached = $this->readCache();
-        $cachedKeys = $cached === null ? [] : $this->keysOf($cached);
+        $cachedKeys = $this->sorted(array_keys($cached ?? []));
 
         return [
             'icon_count' => count($freshKeys),
             'metadata_count' => count($metadataKeys),
             'cache_exists' => $cached !== null,
-            'cache_is_fresh' => $cached !== null && $cachedKeys === $freshKeys,
+            'cache_is_fresh' => $cached !== null && $cached === $this->recordsOf($fresh),
             'orphaned_metadata' => $this->sorted(array_diff($metadataKeys, $freshKeys)),
             'icons_without_metadata' => $this->sorted(array_diff($freshKeys, $metadataKeys)),
             'stale_cache_entries' => $this->sorted(array_diff($cachedKeys, $freshKeys)),
@@ -307,6 +380,7 @@ class IconRegistry
         $label = (string) ($meta['label'] ?? Str::headline($found->name));
         $aliases = array_values($meta['aliases'] ?? []);
         $useCases = array_values($meta['use_cases'] ?? []);
+        $terms = $this->search->termsFor($key, $found->vendor, $found->name, $label, $aliases, $useCases);
 
         return new Icon(
             key: $key,
@@ -318,7 +392,8 @@ class IconRegistry
             path: $found->path,
             aliases: $aliases,
             useCases: $useCases,
-            terms: $this->search->termsFor($key, $found->vendor, $found->name, $label, $aliases, $useCases),
+            terms: $terms,
+            searchText: implode("\n", array_keys($terms)),
         );
     }
 
@@ -341,9 +416,22 @@ class IconRegistry
     }
 
     /**
-     * @return Collection<int, Icon>|null Null when no cache has been written.
+     * @return array<string, array<string, mixed>>|null Null when no cache has been written.
      */
-    protected function readCache(): ?Collection
+    protected function cachedRecords(): ?array
+    {
+        if (! $this->recordsRead) {
+            $this->records = $this->readCache();
+            $this->recordsRead = true;
+        }
+
+        return $this->records;
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>|null Null when there is no cache of this format.
+     */
+    protected function readCache(): ?array
     {
         if (! $this->files->exists($this->cachePath())) {
             return null;
@@ -351,11 +439,35 @@ class IconRegistry
 
         $cached = $this->files->getRequire($this->cachePath());
 
-        // Anything but icons means the file was not written by this version; rebuild instead.
-        if (! is_array($cached) || array_filter($cached, fn (mixed $icon) => ! $icon instanceof Icon) !== []) {
+        if (! is_array($cached) || ($cached['version'] ?? null) !== self::CACHE_VERSION || ! is_array($cached['icons'] ?? null)) {
             return null;
         }
 
-        return collect(array_values($cached));
+        return $cached['icons'];
+    }
+
+    /**
+     * @param  Collection<int, Icon>  $icons
+     * @return array<string, array<string, mixed>>
+     */
+    protected function recordsOf(Collection $icons): array
+    {
+        return $icons->mapWithKeys(fn (Icon $icon) => [$icon->key => $icon->toArray()])->all();
+    }
+
+    /**
+     * Filesystem::replace() would otherwise default to an executable file.
+     */
+    protected function generatedFileMode(): int
+    {
+        return 0666 & ~umask();
+    }
+
+    protected function forgetMemoized(): void
+    {
+        $this->memoized = null;
+        $this->byKey = [];
+        $this->records = null;
+        $this->recordsRead = false;
     }
 }

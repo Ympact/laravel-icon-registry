@@ -40,7 +40,8 @@ php artisan optimize
 ```
 
 builds the cache, and `php artisan optimize:clear` removes it. `icon-registry:cache` and
-`icon-registry:clear` do the same on their own.
+`icon-registry:clear` do the same on their own. Rebuild the cache after adding icons or editing
+the metadata.
 
 ## Translations
 

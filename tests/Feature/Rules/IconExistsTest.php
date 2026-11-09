@@ -10,7 +10,7 @@ use Ympact\IconRegistry\Rules\IconExists;
 beforeEach(function (): void {
     $this->workspace = (new IconWorkspace)
         ->flux(['tabler' => ['trash', 'home'], 'acme' => ['logo']])
-        ->metadata(['tabler.trash' => ['label' => 'Verwijderen', 'aliases' => ['delete']]]);
+        ->metadata(['tabler.trash' => ['label' => 'Remove', 'aliases' => ['delete']]]);
 
     $this->errorFor = fn (mixed $value, ?IconExists $rule = null): string => Validator::make(
         ['icon' => $value],
@@ -67,4 +67,13 @@ it('translates its message', function (): void {
     app()->setLocale('nl');
 
     expect(($this->errorFor)('tabler.trahs'))->toBe('Het geselecteerde icon bestaat niet. Bedoelde je tabler.trash?');
+});
+
+it('rejects a value that is not a string', function (): void {
+    expect(($this->errorFor)(['tabler.trash']))->toBe('The selected icon does not exist.')
+        ->and(($this->errorFor)(5))->toBe('The selected icon does not exist.');
+});
+
+it('rejects a key with surrounding whitespace, which could not be drawn once stored', function (): void {
+    expect(($this->errorFor)(' tabler.trash '))->toContain('tabler.trash');
 });

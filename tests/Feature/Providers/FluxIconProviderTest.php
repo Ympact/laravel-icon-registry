@@ -60,7 +60,7 @@ it('lists the icons that ship with Flux, unless an application file overrides on
 });
 
 it('draws an icon through <flux:icon>, passing the attributes on', function (): void {
-    $html = Blade::render('<x-icon-registry::icon icon="tabler.trash" class="size-5" />');
+    $html = Blade::render('<x-registry-icon icon="tabler.trash" class="size-5" />');
 
     expect($html)->toContain('data-icon="trash"')->toContain('class="size-5"');
 });

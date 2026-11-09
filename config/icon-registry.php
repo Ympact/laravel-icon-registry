@@ -42,6 +42,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Blade component
+    |--------------------------------------------------------------------------
+    |
+    | The tag that draws a stored key, without its "x-" prefix. Run
+    | `php artisan view:clear` after changing it. Blade Icons already
+    | registers <x-icon>, so avoid that name when Blade Icons is installed.
+    |
+    */
+
+    'component' => 'registry-icon',
+
+    /*
+    |--------------------------------------------------------------------------
     | Metadata
     |--------------------------------------------------------------------------
     |

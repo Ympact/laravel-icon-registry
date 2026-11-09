@@ -2,8 +2,8 @@
 
 namespace Ympact\IconRegistry;
 
-use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\View\Compilers\BladeCompiler;
 use Ympact\IconRegistry\Console\CacheCommand;
 use Ympact\IconRegistry\Console\ClearCommand;
 use Ympact\IconRegistry\Console\DoctorCommand;
@@ -28,7 +28,11 @@ class IconRegistryServiceProvider extends ServiceProvider
     {
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'icon-registry');
         $this->loadTranslationsFrom(__DIR__.'/../lang', 'icon-registry');
-        Blade::anonymousComponentPath(__DIR__.'/../resources/views/components', 'icon-registry');
+
+        // Deferred so a request that renders no Blade does not pay for resolving the compiler.
+        $this->callAfterResolving(BladeCompiler::class, function (BladeCompiler $blade): void {
+            $blade->component('icon-registry::icon', $this->app['config']->string('icon-registry.component'));
+        });
 
         $this->publishes([
             __DIR__.'/../config/icon-registry.php' => config_path('icon-registry.php'),

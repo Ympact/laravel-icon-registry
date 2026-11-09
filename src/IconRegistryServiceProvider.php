@@ -7,6 +7,7 @@ use Illuminate\Support\ServiceProvider;
 use Ympact\IconRegistry\Console\CacheCommand;
 use Ympact\IconRegistry\Console\ClearCommand;
 use Ympact\IconRegistry\Console\DoctorCommand;
+use Ympact\IconRegistry\Console\ScanCommand;
 use Ympact\IconRegistry\Console\SearchCommand;
 
 /**
@@ -46,6 +47,7 @@ class IconRegistryServiceProvider extends ServiceProvider
             CacheCommand::class,
             ClearCommand::class,
             DoctorCommand::class,
+            ScanCommand::class,
             SearchCommand::class,
         ]);
 

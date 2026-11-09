@@ -27,6 +27,11 @@ All notable changes to this package are documented here. The format follows
   Named apart from Blade Icons' own `icons:cache` and `icons:clear`. `php artisan optimize` builds
   the cache and `optimize:clear` removes it.
 
+- `icon-registry:scan` lists the icons an application's Blade and PHP source refers to, with
+  keywords from their labels, slot text, actions and file paths. Matching is by pattern, and
+  references chosen at runtime are listed but not resolved. `--write` appends the keywords to the
+  metadata file as use cases after a preview.
+
 ### Notes for applications moving from an in-app registry
 
 This package grew out of the registry in an application of ours. Compared with that one:

@@ -54,6 +54,9 @@ return [
 
 Other fields are kept as they are but not searched.
 
+When a cache exists, edits to this file take effect after `php artisan icon-registry:cache`.
+`icon-registry:doctor` reports a cache that no longer matches as stale.
+
 ## Keeping it tidy
 
 `php artisan icon-registry:doctor` lists metadata for icons that no longer exist and fails when it

@@ -16,16 +16,20 @@ All notable changes to this package are documented here. The format follows
   package is not installed is skipped. Further providers implement `Contracts\IconProvider`.
 - Each icon has a key (`<vendor>.<name>`, the value to store) and a reference (what its provider's
   component expects), so Flux's own icons are listed as `flux.home` and drawn as `home`.
-- `<x-icon-registry::icon icon="...">` and `IconRegistry::render()` draw a stored key with the
-  provider that listed it, and throw `UnknownIcon` for a key none lists.
+- `<x-registry-icon icon="...">` and `IconRegistry::render()` draw a stored key with the provider
+  that listed it, and throw `UnknownIcon` for a key none lists. The component draws nothing for a
+  null or empty key. The tag is configurable with `component`.
 - The `IconExists` validation rule, with `vendor()` and `provider()` constraints and a suggestion for
   the closest icon. When the cache predates an icon, it checks the providers before failing.
   Messages in English and Dutch.
 - A metadata file for labels, aliases and use cases. Rewriting it keeps the header, section
   banners and the comment above each entry.
-- `icon-registry:cache`, `icon-registry:clear`, `icon-registry:doctor` and `icon-registry:search`.
+- `icon-registry:cache`, `icon-registry:clear`, `icon-registry:doctor`, `icon-registry:search` and
+  `icon-registry:export`.
   Named apart from Blade Icons' own `icons:cache` and `icons:clear`. `php artisan optimize` builds
   the cache and `optimize:clear` removes it.
+- A VS Code extension in `editors/vscode` that completes icon keys in Blade and PHP from the
+  manifest `icon-registry:export` writes.
 
 ### Notes for applications moving from an in-app registry
 
@@ -36,5 +40,11 @@ This package grew out of the registry in an application of ours. Compared with t
 - Rewriting a metadata file whose `return [` is not on a line of its own (such as `var_export()`
   output) used to keep the old `return` statement in the header, so the file went on returning the
   old entries. It now keeps only what precedes `return`.
+- The Flux provider keeps `flux.<name>` listed when an application file overrides that icon, so
+  stored keys keep drawing. The icon is then listed as both `flux.<name>` and `app.<name>`.
+- The cache and metadata file are replaced atomically, so a request cannot read a partial cache.
+  The cache is versioned plain data read lazily; a cache of another format is rebuilt.
+- `IconExists` now rejects non-strings and keys with surrounding whitespace, which used to pass
+  and then fail when drawn.
 - A cache or metadata file rewritten while opcache still held the previous version could be read
   back stale within the same process. Both are invalidated after a write.

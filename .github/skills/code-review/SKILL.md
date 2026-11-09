@@ -30,9 +30,13 @@ with neither. Do not propose making either a hard dependency.
 no public alternative; the provider scans the set paths itself rather than read Blade Icons'
 manifest, which is memoised before late-registered sets exist.
 
+**The Blade tag defaults to `registry-icon`, not `icon`.** Blade Icons registers `<x-icon>` by
+default, so the shorter name would collide. The tag is configurable.
+
 **Documentation drift is enforced by tests.** `ConfigurationDocsTest` fails on a config key missing
 from the configuration page, `CommandsDocsTest` on a command, argument or option missing from the
-commands reference, and `DocsIndexTest` on a page not linked from the index.
+commands reference, `DocsIndexTest` on a page not linked from the index, and `FacadeDocsTest` on a public registry
+method without a `@method` tag on the facade.
 
 <!-- Add each convention here the second time a review argues it, with the reason and the test
 that enforces it, if any. -->

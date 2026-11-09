@@ -51,7 +51,7 @@ return [
 | `label` | The name shown for the icon; it defaults to the icon name as a headline ("Device Floppy"). |
 | `aliases` | Other words for the icon. |
 | `use_cases` | Loose search keywords for where the application uses it, many per icon; `icon-registry:scan --write` adds to them. Searchable, at a lower weight. To fix one icon and label per meaning, use a [purpose](storing-and-drawing-icons.md#draw-by-purpose). |
-| `locked` | When `true`, `icon-registry:scan --write` never adds to this entry. Not searched. |
+| `locked` | When `true`, `icon-registry:scan --write` never adds to this entry, and rewrites of the file keep its text as you wrote it. Not searched. |
 
 Other fields are kept as they are but not searched.
 
@@ -64,7 +64,8 @@ When a cache exists, edits to this file take effect after `php artisan icon-regi
 finds any, so it can guard CI. `--prune-meta` (or `--fix`) removes those entries and rewrites the
 file. The rewrite keeps the order of the entries, the file header, section banners (a comment block
 ruled with `---`) and the comment above each entry. A section banner whose first entry is pruned moves to the next entry
-left in that section; a section with no entries left loses its banner.
+left in that section; a section with no entries left loses its banner. Other entries are written back
+in a standard layout, so a comment inside one moves above it; a `locked` entry keeps its exact text.
 
 A file whose `return [` is not on a line of its own, such as `var_export()` output, keeps whatever
 precedes `return` but loses the comments inside the array.
@@ -121,7 +122,8 @@ the file. `--force` skips the question. It only appends to `use_cases`, and:
 
 The words near a chevron or a close button describe the screen, not the icon, so `generic_icons`
 keeps them out. Those icons still appear in the report. A pattern is matched against the icon's
-name, with or without a one-letter style prefix, so `x-mark` also covers `heroicons.o-x-mark`. A
+name, with or without a heroicons style prefix (`o-`, `s-`, `m-`, `c-`), so `x-mark` also covers
+`heroicons.o-x-mark`. A
 pattern containing a dot is matched against the whole key instead, as in `tabler.arrow-*`. `*` is a
 wildcard. The match is exact otherwise, so a set's own naming, such as `fas-xmark`, needs its own
 pattern.

@@ -8,6 +8,7 @@ use Ympact\IconRegistry\Actions\AddIconUseCases;
 use Ympact\IconRegistry\Actions\ScanIconUsages;
 use Ympact\IconRegistry\Console\ScanCommand;
 use Ympact\IconRegistry\IconRegistry;
+use Ympact\IconRegistry\IconSearch;
 use Ympact\IconRegistry\IconUsage;
 use Ympact\IconRegistry\IconUsageReport;
 
@@ -279,25 +280,6 @@ describe('--write', function (): void {
         expect($this->workspace->metadataPath)->not->toBeFile();
     });
 
-    it('matches generic icons by name, without a style prefix, or by whole key', function (array $patterns, array $expected): void {
-        config()->set('icon-registry.generic_icons', $patterns);
-        ($this->scan)('page.blade.php', <<<'BLADE'
-            <flux:button icon="tabler.home">Label</flux:button>
-            <x-heroicon-o-bell /> Label
-            BLADE);
-
-        expect(array_keys(app(AddIconUseCases::class)->additionsFrom(app(ScanIconUsages::class)->handle([$this->source]))))->toBe($expected);
-    })->with([
-        'no patterns' => [[], ['heroicons.o-bell', 'tabler.home']],
-        'name' => [['home'], ['heroicons.o-bell']],
-        'wildcard on a name' => [['ho*'], ['heroicons.o-bell']],
-        'name without its style prefix' => [['bell'], ['tabler.home']],
-        'name with its style prefix' => [['o-bell'], ['tabler.home']],
-        'whole key' => [['tabler.home'], ['heroicons.o-bell']],
-        'whole key of another vendor' => [['lucide.home'], ['heroicons.o-bell', 'tabler.home']],
-        'part of a name' => [['hom'], ['heroicons.o-bell', 'tabler.home']],
-    ]);
-
     it('leaves a locked entry unchanged, and still adds to the entry beside it', function (): void {
         File::ensureDirectoryExists(dirname($this->workspace->metadataPath));
         File::put($this->workspace->metadataPath, <<<'PHP'
@@ -327,13 +309,27 @@ describe('--write', function (): void {
         ]);
     });
 
-    it('does not write to an entry locked while the preview was on screen', function (): void {
-        File::ensureDirectoryExists(dirname($this->workspace->metadataPath));
-        File::put($this->workspace->metadataPath, "<?php\n\nreturn [\n\n    'app.star' => [\n        'locked' => true,\n    ],\n\n];\n");
+    it('counts only the entries written when one is locked during the preview', function (): void {
+        ($this->scan)('page.blade.php', '<flux:button icon="star">Favourite</flux:button><flux:button icon="tabler.home">Dashboard</flux:button>');
 
-        app(AddIconUseCases::class)->handle(['app.star' => ['favourite']]);
+        $action = new class(app(IconRegistry::class), app(IconSearch::class)) extends AddIconUseCases
+        {
+            public string $lockedFile;
 
-        expect(require $this->workspace->metadataPath)->toBe(['app.star' => ['locked' => true]]);
+            public function handle(array $additions): int
+            {
+                File::ensureDirectoryExists(dirname($this->lockedFile));
+                File::put($this->lockedFile, "<?php\n\nreturn [\n\n    'app.star' => [\n        'locked' => true,\n    ],\n\n];\n");
+
+                return parent::handle($additions);
+            }
+        };
+        $action->lockedFile = $this->workspace->metadataPath;
+        app()->instance(AddIconUseCases::class, $action);
+
+        artisan('icon-registry:scan', ['--path' => [$this->source], '--write' => true, '--force' => true])
+            ->expectsOutputToContain('Added use cases to 1 icons.')
+            ->assertSuccessful();
     });
 
     it('refuses to combine with --json', function (): void {

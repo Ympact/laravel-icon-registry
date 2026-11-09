@@ -5,6 +5,7 @@ namespace Ympact\IconRegistry\Actions;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use InvalidArgumentException;
 use Ympact\IconRegistry\IconRegistry;
 use Ympact\IconRegistry\IconSearch;
 use Ympact\IconRegistry\IconUsage;
@@ -20,28 +21,37 @@ class AddIconUseCases
     /** Few enough that a curated entry is not swamped by words from one scan. */
     protected const MAXIMUM_PER_ICON = 5;
 
-    /** One set's style marker, as in heroicons' "o-home", so one pattern covers every style. */
-    protected const STYLE_PREFIX = '/^[a-z]-/';
+    /** Heroicons' styles, as in "o-home", so one pattern covers each. Others are part of the name. */
+    protected const STYLE_PREFIX = '/^[oscm]-/';
 
+    protected Repository $config;
+
+    /** The config is optional so a subclass written against the two-argument constructor still works. */
     public function __construct(
         protected IconRegistry $registry,
         protected IconSearch $search,
-        protected Repository $config,
-    ) {}
+        ?Repository $config = null,
+    ) {
+        $this->config = $config ?? app(Repository::class);
+    }
 
     /**
      * The use cases a write would add, by icon key, leaving out what the entry already says.
      * The strongest keywords are chosen before that, so a repeat scan finds nothing new to add.
      *
+     *
      * @return array<string, list<string>>
+     *
+     * @throws InvalidArgumentException When `generic_icons` holds anything but strings.
      */
     public function additionsFrom(IconUsageReport $report): array
     {
-        $metadata = $this->registry->metadata()->read();
+        $file = $this->registry->metadata();
+        $metadata = $file->read();
         $additions = [];
 
         foreach ($report->icons() as $key => $icon) {
-            if ($this->isGeneric($key) || $this->isLocked($metadata[$key] ?? [])) {
+            if ($this->isGeneric($key) || $file->isLocked($metadata[$key] ?? [])) {
                 continue;
             }
 
@@ -62,19 +72,20 @@ class AddIconUseCases
     /**
      * Rereads the file, so an edit made while the preview was on screen is kept, including an
      * entry locked in that time. Existing entries keep their order, so a hand-kept section stays
-     * under its banner.
+     * under its banner. Returns how many entries gained use cases; at zero the file is not touched.
      *
      * @param  array<string, list<string>>  $additions
      */
-    public function handle(array $additions): void
+    public function handle(array $additions): int
     {
         $file = $this->registry->metadata();
         $metadata = $file->read();
+        $written = 0;
 
         foreach ($additions as $key => $useCases) {
             $entry = $metadata[$key] ?? [];
 
-            if ($this->isLocked($entry)) {
+            if ($file->isLocked($entry)) {
                 continue;
             }
 
@@ -88,33 +99,41 @@ class AddIconUseCases
             } else {
                 $metadata[$key] = $entry;
             }
+
+            $written++;
         }
 
-        $file->write($metadata);
+        if ($written > 0) {
+            $file->write($metadata);
+        }
+
+        return $written;
     }
 
     /**
      * A pattern with a dot is matched against the whole key, any other against the icon's name,
-     * with or without its style prefix.
+     * with or without a heroicons style prefix.
      */
     protected function isGeneric(string $key): bool
     {
         $name = Str::after($key, '.');
         $unstyled = (string) preg_replace(self::STYLE_PREFIX, '', $name);
 
-        return collect((array) $this->config->get('icon-registry.generic_icons', []))->contains(
-            fn (string $pattern) => str_contains($pattern, '.')
-                ? Str::is($pattern, $key)
-                : Str::is($pattern, $name) || Str::is($pattern, $unstyled)
-        );
-    }
+        foreach ((array) $this->config->get('icon-registry.generic_icons', []) as $pattern) {
+            if (! is_string($pattern)) {
+                throw new InvalidArgumentException('The icon-registry.generic_icons config must list strings only.');
+            }
 
-    /**
-     * @param  array<string, mixed>  $entry
-     */
-    protected function isLocked(array $entry): bool
-    {
-        return (bool) ($entry['locked'] ?? false);
+            $matches = str_contains($pattern, '.')
+                ? Str::is($pattern, $key)
+                : Str::is($pattern, $name) || Str::is($pattern, $unstyled);
+
+            if ($matches) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

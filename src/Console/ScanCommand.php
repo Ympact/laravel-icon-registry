@@ -87,9 +87,15 @@ class ScanCommand extends Command
             return;
         }
 
-        $addUseCases->handle($additions);
+        $written = $addUseCases->handle($additions);
 
-        $this->components->info('Added use cases to '.count($additions).' icons.');
+        if ($written === 0) {
+            $this->components->info('Nothing was written.');
+
+            return;
+        }
+
+        $this->components->info("Added use cases to {$written} icons.");
 
         // The cache holds each icon's search terms, so search would not see the new use cases.
         if (is_file($registry->cachePath())) {

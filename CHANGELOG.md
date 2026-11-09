@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-09
+
 ### Added
 
 - `IconRegistry`, a catalogue of the icons the configured providers can draw, with scored search

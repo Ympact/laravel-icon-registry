@@ -164,10 +164,12 @@ class IconRegistry
             $unique[$found['key']] ??= $found;
         }
 
-        return collect($unique)
-            ->map(fn (array $found) => $this->makeIcon($found['provider'], $found['key'], $found['icon'], $metadata))
-            ->sortBy([['vendor', 'asc'], ['name', 'asc']])
-            ->values();
+        $icons = array_map(fn (array $found) => $this->makeIcon($found['provider'], $found['key'], $found['icon'], $metadata), array_values($unique));
+
+        // usort rather than a multi-column sortBy, whose data_get() per comparison dominated the build.
+        usort($icons, fn (Icon $first, Icon $second) => $first->vendor <=> $second->vendor ?: $first->name <=> $second->name);
+
+        return collect($icons);
     }
 
     /**

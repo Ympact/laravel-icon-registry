@@ -43,12 +43,12 @@ it('keeps the header and section comments when it rewrites the file', function (
 
             'tabler.home' => [
                 'label' => 'Home',
-                'aliases' => ['huis'],
+                'aliases' => ['house'],
             ],
 
             // Used for both the row action and the bulk action.
             'tabler.trash' => [
-                'label' => 'Verwijderen',
+                'label' => 'Remove',
                 'use_cases' => ['action.delete'],
             ],
         PHP);
@@ -75,7 +75,7 @@ it('is a fixed point: rewriting twice changes nothing', function (): void {
 
             'tabler.home' => [
                 'label' => 'Home',
-                'aliases' => ['huis', 'start'],
+                'aliases' => ['house', 'start'],
                 'use_cases' => ['navigation.home'],
             ],
         PHP);
@@ -99,7 +99,7 @@ it('drops a pruned entry with its own comment but rehomes the section banner', f
 
             // This icon was deleted from the vendor set months ago.
             'tabler.ghost' => [
-                'label' => 'Weg',
+                'label' => 'Gone',
             ],
 
             'tabler.home' => [
@@ -136,12 +136,12 @@ it('keeps a comment written inside an entry with that entry', function (): void 
 
             'tabler.home' => [
                 'label' => 'Home',
-                // Dutch first, English second, because the search box is Dutch.
-                'aliases' => ['huis', 'home'],
+                // Local term first, English second, because the search box is local.
+                'aliases' => ['house', 'home'],
             ],
 
             'tabler.trash' => [
-                'label' => 'Verwijderen',
+                'label' => 'Remove',
             ],
         PHP);
 
@@ -150,7 +150,7 @@ it('keeps a comment written inside an entry with that entry', function (): void 
     $rewritten = File::get($this->workspace->metadataPath);
 
     // It cannot go back between the fields, but it must not drift onto trash.
-    expect($rewritten)->toMatch('/Dutch first.*?\n\s*\'tabler\.home\'/s');
+    expect($rewritten)->toMatch('/Local term first.*?\n\s*\'tabler\.home\'/s');
 });
 
 it('does not mistake a note that mentions dashes for a section banner', function (): void {
@@ -158,7 +158,7 @@ it('does not mistake a note that mentions dashes for a section banner', function
 
             // Covers the 2024---2026 vintages, see the ingest notes.
             'tabler.ghost' => [
-                'label' => 'Weg',
+                'label' => 'Gone',
             ],
 
             'tabler.home' => [
@@ -176,8 +176,8 @@ it('round-trips values containing quotes and nested custom fields', function ():
     writeMetadataFixture($this->workspace->metadataPath, <<<'PHP'
 
             'tabler.home' => [
-                'label' => "Programma's",
-                'aliases' => ['huis'],
+                'label' => "Director's",
+                'aliases' => ['house'],
                 'tags' => ['nav' => ['primary', 'sidebar']],
             ],
         PHP);
@@ -193,8 +193,8 @@ it('round-trips values containing quotes and nested custom fields', function ():
 
     expect(require $this->workspace->metadataPath)->toBe([
         'tabler.home' => [
-            'label' => "Programma's",
-            'aliases' => ['huis'],
+            'label' => "Director's",
+            'aliases' => ['house'],
             'tags' => ['nav' => ['primary', 'sidebar']],
         ],
     ]);
@@ -203,7 +203,7 @@ it('round-trips values containing quotes and nested custom fields', function ():
 it('rewrites a file that does not put `return [` on a line of its own', function (): void {
     File::ensureDirectoryExists(dirname($this->workspace->metadataPath));
     File::put($this->workspace->metadataPath, '<?php return '.var_export([
-        'tabler.ghost' => ['label' => 'Weg'],
+        'tabler.ghost' => ['label' => 'Gone'],
         'tabler.home' => ['label' => 'Home'],
     ], true).';');
 
@@ -213,7 +213,7 @@ it('rewrites a file that does not put `return [` on a line of its own', function
 });
 
 it('reads a rewritten file straight away, not the copy opcache still holds', function (): void {
-    writeMetadataFixture($this->workspace->metadataPath, "    'tabler.ghost' => ['label' => 'Weg'],\n    'tabler.home' => ['label' => 'Home'],");
+    writeMetadataFixture($this->workspace->metadataPath, "    'tabler.ghost' => ['label' => 'Gone'],\n    'tabler.home' => ['label' => 'Home'],");
 
     // Opcache leaves a file alone for its first seconds; an older file is what it holds on to.
     touch($this->workspace->metadataPath, time() - 60);

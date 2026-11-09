@@ -10,7 +10,7 @@ use Ympact\IconRegistry\Rules\IconExists;
 beforeEach(function (): void {
     $this->workspace = (new IconWorkspace)
         ->flux(['tabler' => ['trash', 'home'], 'acme' => ['logo']])
-        ->metadata(['tabler.trash' => ['label' => 'Verwijderen', 'aliases' => ['delete']]]);
+        ->metadata(['tabler.trash' => ['label' => 'Remove', 'aliases' => ['delete']]]);
 
     $this->errorFor = fn (mixed $value, ?IconExists $rule = null): string => Validator::make(
         ['icon' => $value],

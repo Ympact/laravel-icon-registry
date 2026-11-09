@@ -5,7 +5,7 @@ your own providers. Store an icon key, validate it, draw it, and let people find
 words they actually type.
 
 ```php
-Icons::search('prullenbak');                 // tabler.trash, best match first
+Icons::search('dustbin');                    // tabler.trash, best match first
 
 $request->validate(['icon' => ['nullable', new IconExists]]);
 ```

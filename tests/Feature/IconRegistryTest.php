@@ -10,7 +10,7 @@ use Ympact\IconRegistry\IconRegistry;
 beforeEach(function (): void {
     $this->workspace = (new IconWorkspace)
         ->flux(['tabler' => ['home', 'trash']])
-        ->metadata(['tabler.home' => ['label' => 'Huis', 'aliases' => ['woning']]]);
+        ->metadata(['tabler.home' => ['label' => 'House', 'aliases' => ['dwelling']]]);
 });
 
 afterEach(fn () => $this->workspace->delete());
@@ -18,8 +18,8 @@ afterEach(fn () => $this->workspace->delete());
 it('merges the metadata into the icons', function (): void {
     $icon = app(IconRegistry::class)->find('tabler.home');
 
-    expect($icon?->label)->toBe('Huis')
-        ->and($icon?->aliases)->toBe(['woning'])
+    expect($icon?->label)->toBe('House')
+        ->and($icon?->aliases)->toBe(['dwelling'])
         ->and(app(IconRegistry::class)->find('tabler.trash')?->label)->toBe('Trash');
 });
 
@@ -58,7 +58,7 @@ it('ignores a cache it did not write and rebuilds from the providers', function 
 
 it('reports the cache, orphaned metadata and shadowed keys', function (): void {
     app(Factory::class)->add('tabler', ['path' => $this->workspace->svgSet('tabler', ['home']), 'prefix' => 'tabler']);
-    $this->workspace->metadata(['tabler.gone' => ['label' => 'Weg']]);
+    $this->workspace->metadata(['tabler.gone' => ['label' => 'Gone']]);
 
     $report = app(IconRegistry::class)->validate();
 

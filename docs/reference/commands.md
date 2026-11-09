@@ -31,7 +31,7 @@ Searches the registry. Without a query it opens an interactive search; with one 
 
 ```bash
 php artisan icon-registry:search
-php artisan icon-registry:search "bestand verwijderen" --vendor=tabler
+php artisan icon-registry:search "remove document" --vendor=tabler
 php artisan icon-registry:search home --json
 ```
 

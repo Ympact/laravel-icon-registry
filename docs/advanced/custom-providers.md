@@ -81,10 +81,10 @@ class BrandIconProvider implements IconProvider
 ```
 
 The icons are now `brand.<name>`, searchable, accepted by `IconExists` and drawn by
-`<x-icon-registry::icon>`.
+`<x-registry-icon>`.
 
 ## Caching
 
 The cache stores what `discover()` returned, including the reference, so `render()` must not
 depend on state that changes between the cache build and the request. Rebuild the cache whenever
-the set of icons changes.
+the set of icons or the metadata changes.

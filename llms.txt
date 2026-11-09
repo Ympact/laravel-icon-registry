@@ -1,7 +1,7 @@
 # ympact/laravel-icon-registry
 
 > A Laravel package that catalogues the icons an application can draw (Flux, Blade Icons, custom
-> providers), searches them by name, label, alias and purpose, validates stored icon keys and
+> providers), searches them by name, label, alias, use case and purpose, validates stored icon keys and
 > draws them.
 
 **Supports:** PHP 8.3+, Laravel 12 and 13
@@ -22,7 +22,7 @@ search, a validation rule, a Blade component and a cache. It has no UI.
 - **Provider**: lists and draws icons. Built in: `flux` (needs livewire/flux), `blade-icons`
   (needs blade-ui-kit/blade-icons). Unavailable providers are skipped. First configured wins on a
   duplicate key.
-- **Metadata**: `resources/icons/metadata.php`, keyed by icon key: `label`, `aliases`.
+- **Metadata**: `resources/icons/metadata.php`, keyed by icon key: `label`, `aliases`, `use_cases`.
 - **Purpose**: `resources/icons/purposes.php`, one icon and label per meaning: `'action.delete' => ['icon' => 'tabler.trash', 'label' => 'Delete']`.
 
 ---
@@ -50,9 +50,9 @@ Icons::renderPurpose('action.delete', ['labelled' => true]); // Htmlable, named 
 ```
 
 ```blade
-<x-icon-registry::icon :icon="$model->icon" class="size-5" />                {{-- decorative: aria-hidden="true" --}}
-<x-icon-registry::icon :icon="$model->icon" class="size-5" :label="__('Delete')" /> {{-- role="img" with aria-label --}}
-<x-icon-registry::icon purpose="action.delete" class="size-5" />          {{-- decorative; add `labelled` to name it --}}
+<x-registry-icon :icon="$model->icon" class="size-5" />    {{-- decorative; draws nothing for null --}}
+<x-registry-icon :icon="$model->icon" class="size-5" :label="__('Delete')" /> {{-- role="img" with aria-label --}}
+<x-registry-icon purpose="action.delete" class="size-5" />          {{-- decorative; add `labelled` to name it --}}
 ```
 
 ---
@@ -78,14 +78,17 @@ A picker calls `Icons::search($query, vendor: $vendor)` per keystroke and stores
 | `icon-registry:cache` | Write the cache (also run by `php artisan optimize`). |
 | `icon-registry:clear` | Delete the cache (also run by `optimize:clear`). |
 | `icon-registry:doctor` | Report stale metadata/cache; fails on them. `--fix` repairs. |
+| `icon-registry:scan` | List the icons the source uses, with context keywords; `--json` for scripts, `--write` adds them as use cases. |
 | `icon-registry:search` | Search from the terminal; `--json` for scripts. |
+| `icon-registry:export` | Write the JSON manifest editor extensions complete from. |
 
 ---
 
 ## Key config keys
 
 `providers` (name => `driver` + options), `providers.flux.path`, `providers.flux.loose_vendor`,
-`providers.flux.flux_icons`, `providers.blade-icons.sets`, `metadata`, `cache`.
+`providers.flux.flux_icons`, `providers.blade-icons.sets`, `component`, `metadata`, `cache`,
+`editor_manifest`.
 
 ---
 
@@ -93,7 +96,7 @@ A picker calls `Icons::search($query, vendor: $vendor)` per keystroke and stores
 
 - Storing the reference instead of the key: a Flux icon `home` is the key `flux.home`.
 - Forgetting the cache on deploy: run `php artisan optimize`, or each request scans every provider.
-- After building icons with ympact/flux-icons while a cache exists: run `icon-registry:cache`.
+- After building icons or editing metadata while a cache exists: run `icon-registry:cache`.
 - `icons:cache` is Blade Icons' command, not this package's.
 
 ---

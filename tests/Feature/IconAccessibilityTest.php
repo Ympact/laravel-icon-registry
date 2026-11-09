@@ -29,7 +29,7 @@ function openingTag(string $html): string
 }
 
 it('treats an icon without a name as decorative', function (string $key): void {
-    $tag = openingTag(Blade::render('<x-icon-registry::icon :icon="$key" />', ['key' => $key]));
+    $tag = openingTag(Blade::render('<x-registry-icon :icon="$key" />', ['key' => $key]));
 
     expect(substr_count($tag, 'aria-hidden='))->toBe(1)
         ->and($tag)->toContain('aria-hidden="true"')
@@ -37,7 +37,7 @@ it('treats an icon without a name as decorative', function (string $key): void {
 })->with('providers');
 
 it('names an icon given a label, without hiding it', function (string $key): void {
-    $tag = openingTag(Blade::render('<x-icon-registry::icon :icon="$key" label="Home" />', ['key' => $key]));
+    $tag = openingTag(Blade::render('<x-registry-icon :icon="$key" label="Home" />', ['key' => $key]));
 
     expect($tag)->toContain('role="img"')
         ->toContain('aria-label="Home"')
@@ -96,7 +96,7 @@ it('escapes a dynamic label', function (string $key): void {
 })->with('providers');
 
 it('escapes a dynamic label from the component exactly once', function (string $key): void {
-    $html = Blade::render('<x-icon-registry::icon :icon="$key" :label="$label" />', ['key' => $key, 'label' => 'Save & "close"']);
+    $html = Blade::render('<x-registry-icon :icon="$key" :label="$label" />', ['key' => $key, 'label' => 'Save & "close"']);
 
     expect(openingTag($html))->toContain('aria-label="Save &amp; &quot;close&quot;"');
 })->with('providers');

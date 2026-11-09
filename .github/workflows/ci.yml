@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: .github/scripts/composer-package-repos.sh >> "$GITHUB_OUTPUT"
 
-      - uses: actions/create-github-app-token@v2
+      - uses: actions/create-github-app-token@v3
         id: app-token
         if: steps.packages.outputs.list != ''
         continue-on-error: true
@@ -128,6 +128,27 @@ jobs:
 
       - name: Pest
         run: vendor/bin/pest tests/Feature/WithoutOptionalPackagesTest.php
+
+  vscode-extension:
+    name: VS Code extension
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: editors/vscode
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Tests
+        run: npm test
 
   style:
     name: Code style

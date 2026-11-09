@@ -1,0 +1,77 @@
+{
+  "name": "laravel-icon-registry",
+  "displayName": "Laravel Icon Registry",
+  "description": "Completes icon keys from ympact/laravel-icon-registry in Blade and PHP.",
+  "version": "0.1.0",
+  "publisher": "ympact",
+  "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ympact/laravel-icon-registry.git",
+    "directory": "editors/vscode"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": ["Programming Languages", "Other"],
+  "keywords": ["laravel", "blade", "icons", "flux", "autocomplete"],
+  "main": "./out/extension.js",
+  "activationEvents": ["workspaceContains:vendor/ympact/laravel-icon-registry/composer.json"],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "In an untrusted workspace, completion reads an existing manifest and PHP is never run.",
+      "restrictedConfigurations": ["iconRegistry.autoExport"]
+    },
+    "virtualWorkspaces": false
+  },
+  "contributes": {
+    "commands": [
+      { "command": "iconRegistry.refresh", "title": "Icon Registry: Refresh Icons" },
+      { "command": "iconRegistry.search", "title": "Icon Registry: Search and Insert Icon Key" }
+    ],
+    "configuration": {
+      "title": "Icon Registry",
+      "properties": {
+        "iconRegistry.manifestPath": {
+          "type": "string",
+          "default": "bootstrap/cache/icon-registry-editor.json",
+          "markdownDescription": "The manifest to read, relative to the workspace folder. Matches the package's `editor_manifest` config key.",
+          "scope": "resource"
+        },
+        "iconRegistry.autoExport": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Run `php artisan icon-registry:export` when the manifest is missing and when watched files change. Trusted workspaces only.",
+          "scope": "resource"
+        },
+        "iconRegistry.phpCommand": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["php"],
+          "markdownDescription": "The command that runs PHP, for example `[\"./vendor/bin/sail\", \"php\"]`. A user setting only, so a repository cannot choose what gets executed.",
+          "scope": "machine"
+        },
+        "iconRegistry.watch": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["resources/views/flux/icon/**", "resources/icons/metadata.php", "config/icon-registry.php"],
+          "markdownDescription": "Files that trigger a new export when they change, relative to the workspace folder.",
+          "scope": "resource"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "tsc -p . && node --test \"out/test/*.test.js\"",
+    "package": "tsc -p . && vsce package --no-dependencies"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/vscode": "1.90.0",
+    "@vscode/vsce": "^4.1.0",
+    "typescript": "^7.0.2"
+  }
+}

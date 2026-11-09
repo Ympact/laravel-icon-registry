@@ -20,6 +20,17 @@ updates:
       npm-all:
         patterns: ["*"]
 
+  - package-ecosystem: "npm"
+    directory: "/editors/vscode"
+    schedule:
+      interval: "monthly"
+    ignore:
+      # Must not be newer than engines.vscode, or the extension cannot be packaged.
+      - dependency-name: "@types/vscode"
+    groups:
+      vscode-extension-all:
+        patterns: ["*"]
+
   - package-ecosystem: "github-actions"
     directory: "/.github/workflows"
     schedule:

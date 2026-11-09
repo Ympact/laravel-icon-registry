@@ -43,13 +43,13 @@ it('keeps the header and section comments when it rewrites the file', function (
 
             'tabler.home' => [
                 'label' => 'Home',
-                'aliases' => ['huis'],
+                'aliases' => ['house'],
             ],
 
             // Used for both the row action and the bulk action.
             'tabler.trash' => [
-                'label' => 'Verwijderen',
-                'aliases' => ['prullenbak'],
+                'label' => 'Remove',
+                'use_cases' => ['action.delete'],
             ],
         PHP);
 
@@ -75,7 +75,8 @@ it('is a fixed point: rewriting twice changes nothing', function (): void {
 
             'tabler.home' => [
                 'label' => 'Home',
-                'aliases' => ['huis', 'start'],
+                'aliases' => ['house', 'start'],
+                'use_cases' => ['navigation.home'],
             ],
         PHP);
 
@@ -98,7 +99,7 @@ it('drops a pruned entry with its own comment but rehomes the section banner', f
 
             // This icon was deleted from the vendor set months ago.
             'tabler.ghost' => [
-                'label' => 'Weg',
+                'label' => 'Gone',
             ],
 
             'tabler.home' => [
@@ -135,12 +136,12 @@ it('keeps a comment written inside an entry with that entry', function (): void 
 
             'tabler.home' => [
                 'label' => 'Home',
-                // Dutch first, English second, because the search box is Dutch.
-                'aliases' => ['huis', 'home'],
+                // Local term first, English second, because the search box is local.
+                'aliases' => ['house', 'home'],
             ],
 
             'tabler.trash' => [
-                'label' => 'Verwijderen',
+                'label' => 'Remove',
             ],
         PHP);
 
@@ -149,7 +150,7 @@ it('keeps a comment written inside an entry with that entry', function (): void 
     $rewritten = File::get($this->workspace->metadataPath);
 
     // It cannot go back between the fields, but it must not drift onto trash.
-    expect($rewritten)->toMatch('/Dutch first.*?\n\s*\'tabler\.home\'/s');
+    expect($rewritten)->toMatch('/Local term first.*?\n\s*\'tabler\.home\'/s');
 });
 
 it('does not mistake a note that mentions dashes for a section banner', function (): void {
@@ -157,7 +158,7 @@ it('does not mistake a note that mentions dashes for a section banner', function
 
             // Covers the 2024---2026 vintages, see the ingest notes.
             'tabler.ghost' => [
-                'label' => 'Weg',
+                'label' => 'Gone',
             ],
 
             'tabler.home' => [
@@ -175,8 +176,8 @@ it('round-trips values containing quotes and nested custom fields', function ():
     writeMetadataFixture($this->workspace->metadataPath, <<<'PHP'
 
             'tabler.home' => [
-                'label' => "Programma's",
-                'aliases' => ['huis'],
+                'label' => "Director's",
+                'aliases' => ['house'],
                 'tags' => ['nav' => ['primary', 'sidebar']],
             ],
         PHP);
@@ -192,8 +193,8 @@ it('round-trips values containing quotes and nested custom fields', function ():
 
     expect(require $this->workspace->metadataPath)->toBe([
         'tabler.home' => [
-            'label' => "Programma's",
-            'aliases' => ['huis'],
+            'label' => "Director's",
+            'aliases' => ['house'],
             'tags' => ['nav' => ['primary', 'sidebar']],
         ],
     ]);
@@ -202,7 +203,7 @@ it('round-trips values containing quotes and nested custom fields', function ():
 it('rewrites a file that does not put `return [` on a line of its own', function (): void {
     File::ensureDirectoryExists(dirname($this->workspace->metadataPath));
     File::put($this->workspace->metadataPath, '<?php return '.var_export([
-        'tabler.ghost' => ['label' => 'Weg'],
+        'tabler.ghost' => ['label' => 'Gone'],
         'tabler.home' => ['label' => 'Home'],
     ], true).';');
 
@@ -212,7 +213,7 @@ it('rewrites a file that does not put `return [` on a line of its own', function
 });
 
 it('reads a rewritten file straight away, not the copy opcache still holds', function (): void {
-    writeMetadataFixture($this->workspace->metadataPath, "    'tabler.ghost' => ['label' => 'Weg'],\n    'tabler.home' => ['label' => 'Home'],");
+    writeMetadataFixture($this->workspace->metadataPath, "    'tabler.ghost' => ['label' => 'Gone'],\n    'tabler.home' => ['label' => 'Home'],");
 
     // Opcache leaves a file alone for its first seconds; an older file is what it holds on to.
     touch($this->workspace->metadataPath, time() - 60);
@@ -223,3 +224,146 @@ it('reads a rewritten file straight away, not the copy opcache still holds', fun
 
     expect($registry->metadata()->read())->toBe(['tabler.home' => ['label' => 'Home']]);
 })->skip(fn (): bool => ! filter_var(ini_get('opcache.enable_cli'), FILTER_VALIDATE_BOOL), 'Needs opcache.enable_cli, which CI turns on.');
+
+it('replaces the metadata file rather than rewriting it in place', function (): void {
+    $this->workspace->metadata(['tabler.home' => ['label' => 'Home']]);
+    $inode = fileinode($this->workspace->metadataPath);
+
+    app(IconRegistry::class)->metadata()->write(['tabler.home' => ['label' => 'Home']]);
+    clearstatcache();
+
+    expect(fileinode($this->workspace->metadataPath))->not->toBe($inode);
+});
+
+it('keeps the file mode of a metadata file it rewrites', function (): void {
+    $this->workspace->metadata(['tabler.home' => ['label' => 'Home']]);
+    chmod($this->workspace->metadataPath, 0640);
+
+    app(IconRegistry::class)->metadata()->write(['tabler.home' => ['label' => 'Home']]);
+    clearstatcache();
+
+    expect(fileperms($this->workspace->metadataPath) & 0777)->toBe(0640);
+});
+
+it('creates a metadata file that is not executable', function (): void {
+    app(IconRegistry::class)->metadata()->write(['tabler.home' => ['label' => 'Home']]);
+    clearstatcache();
+
+    expect(fileperms($this->workspace->metadataPath) & 0777)->toBe(0666 & ~umask());
+});
+
+it('keeps the order of the entries when it prunes, so a section stays under its banner', function (): void {
+    writeMetadataFixture($this->workspace->metadataPath, <<<'PHP'
+
+            // ----------------------------------------------------------
+            // tabler.*: our default set
+            // ----------------------------------------------------------
+
+            'tabler.trash' => [
+                'label' => 'Delete',
+            ],
+
+            'tabler.gone' => [
+                'label' => 'Gone',
+            ],
+
+            'tabler.home' => [
+                'label' => 'Home',
+            ],
+
+            'acme.labels' => [
+                'label' => 'Labels',
+            ],
+        PHP);
+
+    app(IconRegistry::class)->cleanMetadata(write: true);
+
+    $written = File::get($this->workspace->metadataPath);
+
+    expect(array_keys(require $this->workspace->metadataPath))->toBe(['tabler.trash', 'tabler.home', 'acme.labels'])
+        ->and(strpos($written, 'our default set'))->toBeLessThan(strpos($written, "'tabler.trash'"));
+});
+
+it('moves a banner to the next entry of its section, not to an earlier one', function (): void {
+    writeMetadataFixture($this->workspace->metadataPath, <<<'PHP'
+
+            'tabler.home' => [
+                'label' => 'Home',
+            ],
+
+            // ------
+            // Actions
+            // ------
+
+            'tabler.gone' => [
+                'label' => 'Gone',
+            ],
+
+            'tabler.trash' => [
+                'label' => 'Delete',
+            ],
+        PHP);
+
+    app(IconRegistry::class)->cleanMetadata(write: true);
+
+    $written = File::get($this->workspace->metadataPath);
+
+    expect(strpos($written, "'tabler.home'"))->toBeLessThan(strpos($written, 'Actions'))
+        ->and(strpos($written, 'Actions'))->toBeLessThan(strpos($written, "'tabler.trash'"));
+});
+
+it('keeps the banner of a section that continues with another vendor', function (): void {
+    writeMetadataFixture($this->workspace->metadataPath, <<<'PHP'
+
+            // ------
+            // Mixed section
+            // ------
+
+            'tabler.gone' => [
+                'label' => 'Gone',
+            ],
+
+            'acme.labels' => [
+                'label' => 'Labels',
+            ],
+        PHP);
+
+    app(IconRegistry::class)->cleanMetadata(write: true);
+
+    $written = File::get($this->workspace->metadataPath);
+
+    expect($written)->toContain('Mixed section')
+        ->and(strpos($written, 'Mixed section'))->toBeLessThan(strpos($written, "'acme.labels'"));
+});
+
+it('drops the banner of a section left empty, without taking over the next section', function (): void {
+    writeMetadataFixture($this->workspace->metadataPath, <<<'PHP'
+
+            // ------
+            // First
+            // ------
+
+            'tabler.gone' => [
+                'label' => 'Gone',
+            ],
+
+            // ------
+            // Second
+            // ------
+
+            'tabler.gone2' => [
+                'label' => 'Gone too',
+            ],
+
+            'tabler.home' => [
+                'label' => 'Home',
+            ],
+        PHP);
+
+    app(IconRegistry::class)->cleanMetadata(write: true);
+
+    $written = File::get($this->workspace->metadataPath);
+
+    expect($written)->not->toContain('First')
+        ->and(strpos($written, 'Second'))->toBeLessThan(strpos($written, "'tabler.home'"));
+});

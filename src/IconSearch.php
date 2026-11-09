@@ -28,6 +28,8 @@ class IconSearch
 
     protected const WEIGHT_VENDOR = 70;
 
+    protected const WEIGHT_USE_CASE = 55;
+
     protected const WEIGHT_PURPOSE = 55;
 
     /** A word taken out of a longer phrase, as a percentage of the phrase's weight. */
@@ -41,9 +43,10 @@ class IconSearch
     /**
      * The terms a query is matched against, flattened once at build time so a keystroke never
      * re-splits strings. A hit on the label or the icon's own name outweighs one on an alias,
-     * and that one outweighs a purpose.
+     * and that one outweighs a use case or purpose.
      *
      * @param  list<string>  $aliases
+     * @param  list<string>  $useCases
      * @param  list<string>  $purposes
      * @return array<string, int>
      */
@@ -53,6 +56,7 @@ class IconSearch
         string $name,
         string $label,
         array $aliases,
+        array $useCases,
         array $purposes,
     ): array {
         $sources = [
@@ -61,6 +65,7 @@ class IconSearch
             [$label, self::WEIGHT_LABEL],
             [$vendor, self::WEIGHT_VENDOR],
             ...array_map(fn (string $alias) => [$alias, self::WEIGHT_ALIAS], $aliases),
+            ...array_map(fn (string $useCase) => [$useCase, self::WEIGHT_USE_CASE], $useCases),
             ...array_map(fn (string $purpose) => [$purpose, self::WEIGHT_PURPOSE], $purposes),
         ];
 
@@ -92,6 +97,7 @@ class IconSearch
      */
     public function search(array $icons, ?string $query, int $limit): array
     {
+        $limit = max(0, $limit);
         $tokens = $this->tokens(Str::lower(trim((string) $query)));
 
         if ($tokens === []) {
@@ -126,6 +132,10 @@ class IconSearch
         $hits = [];
 
         foreach ($icons as $icon) {
+            if (! $fuzzy && ! $this->mentionsEveryToken($icon->searchText, $tokens)) {
+                continue;
+            }
+
             $score = $this->score($icon, $tokens, $fuzzy);
 
             if ($score !== null) {
@@ -137,9 +147,25 @@ class IconSearch
     }
 
     /**
+     * Most icons fail this, and one string comparison is far cheaper than scoring every term.
+     *
+     * @param  list<string>  $tokens
+     */
+    protected function mentionsEveryToken(string $searchText, array $tokens): bool
+    {
+        foreach ($tokens as $token) {
+            if (! str_contains($searchText, $token)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * @return list<string>
      */
-    protected function tokens(string $value): array
+    public function tokens(string $value): array
     {
         $tokens = preg_split('/[\s._-]+/', $value, flags: PREG_SPLIT_NO_EMPTY) ?: [];
 

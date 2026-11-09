@@ -26,7 +26,7 @@ php artisan vendor:publish --tag=icon-registry-config
 
 ## Add metadata
 
-Search matches icon names out of the box. Labels and aliases in
+Search matches icon names out of the box. Labels, aliases and use cases in
 `resources/icons/metadata.php` make icons findable by the words your users type; see
 [Searching and metadata](../usage/searching-and-metadata.md).
 
@@ -40,7 +40,8 @@ php artisan optimize
 ```
 
 builds the cache, and `php artisan optimize:clear` removes it. `icon-registry:cache` and
-`icon-registry:clear` do the same on their own.
+`icon-registry:clear` do the same on their own. Rebuild the cache after adding icons or editing
+the metadata.
 
 ## Translations
 

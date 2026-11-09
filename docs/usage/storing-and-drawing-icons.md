@@ -33,8 +33,11 @@ so a newly built icon is accepted without rebuilding the cache first.
 ## Draw a stored key
 
 ```blade
-<x-icon-registry::icon :icon="$item->icon" class="size-5" />
+<x-registry-icon :icon="$item->icon" class="size-5" />
 ```
+
+An empty or null key draws nothing, so a nullable column needs no check around the tag. Change the
+tag with the `component` config key.
 
 The component hands the attributes to the provider that listed the key: `<flux:icon>` for Flux
 icons, `svg()` for Blade Icons. From PHP:
@@ -66,8 +69,8 @@ An icon can serve several purposes, and each purpose has exactly one icon and on
 goes through `__()`, so it can be text or a translation key.
 
 ```blade
-<x-icon-registry::icon purpose="action.delete" class="size-5" />
-<x-icon-registry::icon purpose="status.overdue" labelled />
+<x-registry-icon purpose="action.delete" class="size-5" />
+<x-registry-icon purpose="status.overdue" labelled />
 ```
 
 ```php
@@ -91,7 +94,7 @@ An icon is decorative unless you give it an accessible name, so it renders with
 `aria-hidden="true"`. Pass `label` when the icon carries meaning on its own:
 
 ```blade
-<x-icon-registry::icon :icon="$item->icon" :label="__('Overdue')" />
+<x-registry-icon :icon="$item->icon" :label="__('Overdue')" />
 ```
 
 ```php
@@ -113,6 +116,6 @@ decorative and the button takes the name:
 
 ```blade
 <button type="button" aria-label="{{ __('Delete invoice') }}">
-    <x-icon-registry::icon icon="tabler.trash" class="size-5" />
+    <x-registry-icon icon="tabler.trash" class="size-5" />
 </button>
 ```

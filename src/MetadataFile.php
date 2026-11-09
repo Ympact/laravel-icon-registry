@@ -7,7 +7,7 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 
 /**
- * The application's icon metadata file: labels and aliases keyed by icon key. It is
+ * The application's icon metadata file: labels, aliases and use cases keyed by icon key. It is
  * rewritten by hand rather than with var_export(), so its header and the comments documenting
  * each entry survive a rewrite.
  */
@@ -32,7 +32,7 @@ class MetadataFile
         PHP;
 
     /** The fields the registry reads; anything else in an entry is carried through untouched. */
-    protected const KNOWN_FIELDS = ['label', 'aliases'];
+    protected const KNOWN_FIELDS = ['label', 'aliases', 'use_cases'];
 
     public function __construct(
         protected Filesystem $files,
@@ -69,6 +69,7 @@ class MetadataFile
         return array_filter([
             'label' => $label,
             'aliases' => $this->normalizeList($entry['aliases'] ?? []),
+            'use_cases' => $this->normalizeList($entry['use_cases'] ?? []),
             ...Arr::except($entry, self::KNOWN_FIELDS),
         ], fn (mixed $value) => filled($value));
     }
@@ -78,9 +79,9 @@ class MetadataFile
      */
     public function write(array $metadata): void
     {
-        ['header' => $header, 'comments' => $comments] = $this->parseSource();
+        ['header' => $header, 'comments' => $comments, 'keys' => $sourceKeys] = $this->parseSource();
 
-        $comments = $this->rehomeBanners($comments, array_keys($metadata));
+        $comments = $this->rehomeBanners($comments, $sourceKeys, array_keys($metadata));
 
         $body = '';
 
@@ -97,12 +98,24 @@ class MetadataFile
         }
 
         $this->files->ensureDirectoryExists(dirname($this->path));
-        $this->files->put($this->path, rtrim($header)."\n\nreturn [\n\n".$body."];\n");
+        $this->files->replace($this->path, rtrim($header)."\n\nreturn [\n\n".$body."];\n", $this->fileMode());
 
         // Opcache would otherwise serve the previous file to a `require` within its revalidate window.
         if (function_exists('opcache_invalidate')) {
             opcache_invalidate($this->path, true);
         }
+    }
+
+    /**
+     * The file's current mode, so a rewrite shows no mode change in version control.
+     */
+    protected function fileMode(): int
+    {
+        clearstatcache(true, $this->path);
+
+        return $this->files->exists($this->path)
+            ? fileperms($this->path) & 0777
+            : 0666 & ~umask();
     }
 
     /**
@@ -120,16 +133,17 @@ class MetadataFile
      * Splits the file into its header and the comments preceding each top-level entry, telling
      * a section banner (a ruled block heading a vendor's entries) apart from a note on the entry.
      *
-     * @return array{header: string, comments: array<string, array{banner: ?string, note: ?string}>}
+     * @return array{header: string, comments: array<string, array{banner: ?string, note: ?string}>, keys: list<string>}
      */
     protected function parseSource(): array
     {
         if (! $this->files->exists($this->path)) {
-            return ['header' => self::HEADER, 'comments' => []];
+            return ['header' => self::HEADER, 'comments' => [], 'keys' => []];
         }
 
         $header = [];
         $comments = [];
+        $keys = [];
         $blocks = [];
         $block = [];
         $current = null;
@@ -169,6 +183,7 @@ class MetadataFile
 
             if ($depth === 0 && preg_match('/^\s*[\'"]([^\'"]+)[\'"]\s*=>/', $line, $match)) {
                 $current = $match[1];
+                $keys[] = $current;
 
                 if ($blocks !== []) {
                     $comments[$current] = $this->splitComments($blocks);
@@ -197,12 +212,13 @@ class MetadataFile
         // Not laid out as `return [` on a line of its own, e.g. var_export() output: keep what
         // precedes the return statement, as the comments cannot be told apart from the code.
         if (! $inBody) {
-            return ['header' => Str::before(implode("\n", $header), 'return') ?: self::HEADER, 'comments' => []];
+            return ['header' => Str::before(implode("\n", $header), 'return') ?: self::HEADER, 'comments' => [], 'keys' => []];
         }
 
         return [
             'header' => implode("\n", $header),
             'comments' => $comments,
+            'keys' => $keys,
         ];
     }
 
@@ -225,14 +241,15 @@ class MetadataFile
     }
 
     /**
-     * A note on a pruned entry leaves with it. A section banner heads the whole vendor block,
-     * so it moves to the first entry of that vendor still there.
+     * A note on a pruned entry leaves with it. A section banner heads everything down to the
+     * next banner, so it moves to the next entry still there, and goes if its section is empty.
      *
      * @param  array<string, array{banner: ?string, note: ?string}>  $comments
-     * @param  list<string>  $keys
+     * @param  list<string>  $sourceKeys  Every entry in the file, in file order.
+     * @param  list<string>  $keys  The entries being written.
      * @return array<string, array{banner: ?string, note: ?string}>
      */
-    protected function rehomeBanners(array $comments, array $keys): array
+    protected function rehomeBanners(array $comments, array $sourceKeys, array $keys): array
     {
         $surviving = array_flip($keys);
 
@@ -247,11 +264,7 @@ class MetadataFile
                 continue;
             }
 
-            $heir = Arr::first(
-                $keys,
-                fn (string $candidate) => Str::before($candidate, '.') === Str::before($key, '.')
-                    && ($comments[$candidate]['banner'] ?? null) === null
-            );
+            $heir = $this->nextInSection($key, $sourceKeys, $surviving, $comments);
 
             if ($heir !== null) {
                 $comments[$heir]['banner'] = $comment['banner'];
@@ -260,6 +273,29 @@ class MetadataFile
         }
 
         return $comments;
+    }
+
+    /**
+     * @param  list<string>  $sourceKeys
+     * @param  array<string, int>  $surviving
+     * @param  array<string, array{banner: ?string, note: ?string}>  $comments
+     * @return string|null Null when the section has no entry left.
+     */
+    protected function nextInSection(string $key, array $sourceKeys, array $surviving, array $comments): ?string
+    {
+        $position = array_search($key, $sourceKeys, true);
+
+        foreach (array_slice($sourceKeys, $position === false ? count($sourceKeys) : $position + 1) as $candidate) {
+            if (($comments[$candidate]['banner'] ?? null) !== null) {
+                return null;
+            }
+
+            if (isset($surviving[$candidate])) {
+                return $candidate;
+            }
+        }
+
+        return null;
     }
 
     /**

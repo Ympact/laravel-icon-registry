@@ -5,13 +5,13 @@ your own providers. Store an icon key, validate it, draw it, and let people find
 words they actually type.
 
 ```php
-Icons::search('prullenbak');                 // tabler.trash, best match first
+Icons::search('dustbin');                    // tabler.trash, best match first
 
 $request->validate(['icon' => ['nullable', new IconExists]]);
 ```
 
 ```blade
-<x-icon-registry::icon :icon="$item->icon" class="size-5" />
+<x-registry-icon :icon="$item->icon" class="size-5" />
 ```
 
 ## Features
@@ -19,11 +19,12 @@ $request->validate(['icon' => ['nullable', new IconExists]]);
 - **Providers** for [Flux](https://fluxui.dev) (its own icons, your `resources/views/flux/icon`, and
   everything built there by [ympact/flux-icons](https://github.com/Ympact/flux-icons)) and for every
   [Blade Icons](https://github.com/blade-ui-kit/blade-icons) set. Both optional, and you can add your own.
-- **Scored search** over names, labels, aliases and purposes, with typo tolerance.
+- **Scored search** over names, labels, aliases, use cases and purposes, with typo tolerance.
 - **A metadata file** for labels and aliases, which the doctor command prunes without losing your comments.
 - **Purposes**: one icon and label per meaning (`action.delete`), so similar actions look the same across your app.
 - **An `IconExists` rule** that suggests the closest icon.
-- **A cache** that `php artisan optimize` builds.
+- **A cache** that `php artisan optimize` builds. With opcache, drawing a few icons does not load the whole set.
+- **A VS Code extension** that completes icon keys as you type. See [Editor support](docs/usage/editor-support.md).
 
 ## Requirements
 

@@ -61,7 +61,7 @@ it('rejects a purpose without an icon or label', function (array $entry): void {
 ])->throws(InvalidArgumentException::class, 'action.broken');
 
 it('draws a purpose as decorative by default', function (): void {
-    $html = Blade::render('<x-icon-registry::icon purpose="action.delete" class="size-5" />');
+    $html = Blade::render('<x-registry-icon purpose="action.delete" class="size-5" />');
 
     expect($html)->toContain('data-icon="trash"')
         ->toContain('class="size-5"')
@@ -71,7 +71,7 @@ it('draws a purpose as decorative by default', function (): void {
 });
 
 it('names a purpose only when asked', function (): void {
-    $html = Blade::render('<x-icon-registry::icon purpose="action.delete" labelled />');
+    $html = Blade::render('<x-registry-icon purpose="action.delete" labelled />');
 
     expect($html)->toContain('role="img"')
         ->toContain('aria-label="Delete"')
@@ -93,17 +93,17 @@ it('translates the label of a purpose', function (): void {
 it('escapes the label of a purpose once', function (): void {
     $this->workspace->purposes(['action.save' => ['icon' => 'tabler.home', 'label' => 'Save & "close"']]);
 
-    expect(Blade::render('<x-icon-registry::icon purpose="action.save" labelled />'))
+    expect(Blade::render('<x-registry-icon purpose="action.save" labelled />'))
         ->toContain('aria-label="Save &amp; &quot;close&quot;"');
 });
 
 it('prefers an explicit label over the label of the purpose', function (): void {
-    expect(Blade::render('<x-icon-registry::icon purpose="action.delete" labelled label="Delete invoice" />'))
+    expect(Blade::render('<x-registry-icon purpose="action.delete" labelled label="Delete invoice" />'))
         ->toContain('aria-label="Delete invoice"');
 });
 
 it('throws when drawing an unknown purpose', function (): void {
-    Blade::render('<x-icon-registry::icon purpose="action.nope" />');
+    Blade::render('<x-registry-icon purpose="action.nope" />');
 })->throws(ViewException::class, 'action.nope');
 
 it('records the purposes on the icon and searches them', function (): void {

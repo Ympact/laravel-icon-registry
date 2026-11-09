@@ -10,7 +10,7 @@ use Ympact\IconRegistry\IconRegistry;
 beforeEach(function (): void {
     $this->workspace = (new IconWorkspace)
         ->flux(['tabler' => ['home', 'trash']])
-        ->metadata(['tabler.home' => ['label' => 'Huis', 'aliases' => ['woning']]]);
+        ->metadata(['tabler.home' => ['label' => 'House', 'aliases' => ['dwelling']]]);
 });
 
 afterEach(fn () => $this->workspace->delete());
@@ -18,8 +18,8 @@ afterEach(fn () => $this->workspace->delete());
 it('merges the metadata into the icons', function (): void {
     $icon = app(IconRegistry::class)->find('tabler.home');
 
-    expect($icon?->label)->toBe('Huis')
-        ->and($icon?->aliases)->toBe(['woning'])
+    expect($icon?->label)->toBe('House')
+        ->and($icon?->aliases)->toBe(['dwelling'])
         ->and(app(IconRegistry::class)->find('tabler.trash')?->label)->toBe('Trash');
 });
 
@@ -58,7 +58,7 @@ it('ignores a cache it did not write and rebuilds from the providers', function 
 
 it('reports the cache, orphaned metadata and shadowed keys', function (): void {
     app(Factory::class)->add('tabler', ['path' => $this->workspace->svgSet('tabler', ['home']), 'prefix' => 'tabler']);
-    $this->workspace->metadata(['tabler.gone' => ['label' => 'Weg']]);
+    $this->workspace->metadata(['tabler.gone' => ['label' => 'Gone']]);
 
     $report = app(IconRegistry::class)->validate();
 
@@ -102,3 +102,81 @@ it('refuses a driver that is not an icon provider', function (): void {
 
     app(IconRegistry::class)->providers();
 })->throws(InvalidArgumentException::class, 'must implement');
+
+it('replaces the cache rather than writing into the file a request may be reading', function (): void {
+    $registry = app(IconRegistry::class);
+    $registry->rebuildCache();
+    $inode = fileinode($this->workspace->cachePath);
+
+    $registry->rebuildCache();
+    clearstatcache();
+
+    expect(fileinode($this->workspace->cachePath))->not->toBe($inode);
+});
+
+it('ignores a cache of another format instead of failing on it', function (): void {
+    File::ensureDirectoryExists(dirname($this->workspace->cachePath));
+    File::put($this->workspace->cachePath, "<?php return ['version' => 0, 'icons' => ['tabler.home' => ['legacy' => true]]];");
+
+    expect(app(IconRegistry::class)->find('tabler.home')?->label)->toBe('House');
+});
+
+it('restores a cached icon exactly as it was built', function (): void {
+    $registry = app(IconRegistry::class);
+    $built = $registry->find('tabler.home', fresh: true);
+    $registry->rebuildCache();
+    app()->forgetScopedInstances();
+
+    expect(app(IconRegistry::class)->find('tabler.home'))->toEqual($built)
+        ->and(app(IconRegistry::class)->all()->firstWhere('key', 'tabler.home'))->toEqual($built);
+});
+
+it('reports a cache whose labels no longer match the metadata as stale', function (): void {
+    app(IconRegistry::class)->rebuildCache();
+    expect(app(IconRegistry::class)->validate()['cache_is_fresh'])->toBeTrue();
+
+    $this->workspace->metadata(['tabler.home' => ['label' => 'Dwelling']]);
+
+    if (function_exists('opcache_invalidate')) {
+        opcache_invalidate($this->workspace->metadataPath, true);
+    }
+
+    expect(app(IconRegistry::class)->validate()['cache_is_fresh'])->toBeFalse();
+});
+
+it('rebuilds over a cache of objects, the format earlier builds wrote', function (): void {
+    File::ensureDirectoryExists(dirname($this->workspace->cachePath));
+    File::put($this->workspace->cachePath, <<<'PHP'
+        <?php
+
+        return array (
+          0 =>
+          \Ympact\IconRegistry\Icon::__set_state(array(
+             'key' => 'tabler.home',
+             'vendor' => 'tabler',
+             'name' => 'home',
+             'label' => 'Stale',
+             'provider' => 'flux',
+             'reference' => 'tabler.home',
+             'path' => NULL,
+             'aliases' => array (),
+             'useCases' => array (),
+             'terms' => array (),
+          )),
+        );
+        PHP);
+
+    expect(app(IconRegistry::class)->find('tabler.home')?->label)->toBe('House');
+});
+
+it('does not make the files it generates executable', function (): void {
+    $registry = app(IconRegistry::class);
+    $manifest = "{$this->workspace->root}/editor.json";
+
+    $registry->rebuildCache();
+    $registry->writeEditorManifest($manifest);
+    clearstatcache();
+
+    expect(fileperms($this->workspace->cachePath) & 0777)->toBe(0666 & ~umask())
+        ->and(fileperms($manifest) & 0777)->toBe(0666 & ~umask());
+});

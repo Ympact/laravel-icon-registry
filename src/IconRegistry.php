@@ -35,7 +35,11 @@ class IconRegistry
      */
     protected ?Collection $memoized = null;
 
-    /** @var Collection<string, Purpose>|null */
+    /**
+     * Null marks a malformed entry, kept so only that purpose fails and the doctor can name it.
+     *
+     * @var Collection<string, Purpose|null>|null
+     */
     protected ?Collection $purposes = null;
 
     /** @var array<string, Icon> */
@@ -159,10 +163,19 @@ class IconRegistry
      * than the cache, so changing the icon of a purpose takes effect without a rebuild.
      *
      * @return Collection<string, Purpose>
-     *
-     * @throws InvalidArgumentException when an entry lacks an icon or a label.
      */
     public function purposes(): Collection
+    {
+        /** @var Collection<string, Purpose> */
+        return $this->purposeEntries()->filter()->collect();
+    }
+
+    /**
+     * The purposes file as read, with null for each malformed entry.
+     *
+     * @return Collection<string, Purpose|null>
+     */
+    protected function purposeEntries(): Collection
     {
         if ($this->purposes !== null) {
             return $this->purposes;
@@ -202,8 +215,11 @@ class IconRegistry
         $attributes = $this->bag($attributes);
         $given = $attributes->except('labelled')->getAttributes();
 
-        if ($attributes->get('labelled') && blank($given['label'] ?? null)) {
-            $given['label'] = BladeCompiler::sanitizeComponentAttribute(__($purpose->label));
+        if (filter_var($attributes->get('labelled'), FILTER_VALIDATE_BOOLEAN) && blank($given['label'] ?? null)) {
+            $translated = __($purpose->label);
+
+            // A label that happens to name a translation group comes back as that group's array.
+            $given['label'] = BladeCompiler::sanitizeComponentAttribute(is_string($translated) ? $translated : $purpose->label);
         }
 
         return $this->render($purpose->icon, new ComponentAttributeBag($given));
@@ -336,7 +352,7 @@ class IconRegistry
     /**
      * Compares the icons on disk with the metadata and the cache.
      *
-     * @return array{icon_count: int, metadata_count: int, cache_exists: bool, cache_is_fresh: bool, orphaned_metadata: list<string>, icons_without_metadata: list<string>, stale_cache_entries: list<string>, uncached_icons: list<string>, shadowed_icons: list<string>, purpose_count: int, orphaned_purposes: list<string>}
+     * @return array{icon_count: int, metadata_count: int, cache_exists: bool, cache_is_fresh: bool, orphaned_metadata: list<string>, icons_without_metadata: list<string>, stale_cache_entries: list<string>, uncached_icons: list<string>, shadowed_icons: list<string>, purpose_count: int, orphaned_purposes: list<string>, malformed_purposes: list<string>}
      */
     public function validate(): array
     {
@@ -357,6 +373,7 @@ class IconRegistry
             'uncached_icons' => $this->sorted(array_diff($freshKeys, $cachedKeys)),
             'shadowed_icons' => $this->shadowedKeys(),
             'purpose_count' => $this->purposes()->count(),
+            'malformed_purposes' => $this->sorted($this->purposeEntries()->filter(fn (?Purpose $purpose) => $purpose === null)->keys()->all()),
             'orphaned_purposes' => $this->sorted(
                 $this->purposes()
                     ->reject(fn (Purpose $purpose) => in_array($purpose->icon, $freshKeys, true))
@@ -405,11 +422,17 @@ class IconRegistry
     }
 
     /**
-     * @throws UnknownPurpose when the purpose is not defined.
+     * @throws UnknownPurpose when the purpose is not defined or is malformed.
      */
     protected function definedPurpose(string $name): Purpose
     {
-        return $this->purposes()->get($name) ?? throw UnknownPurpose::named($name);
+        $entries = $this->purposeEntries();
+
+        if (! $entries->has($name)) {
+            throw UnknownPurpose::named($name);
+        }
+
+        return $entries->get($name) ?? throw UnknownPurpose::malformed($name);
     }
 
     /**
@@ -431,7 +454,12 @@ class IconRegistry
     protected function withAccessibility(ComponentAttributeBag $attributes): ComponentAttributeBag
     {
         $label = trim((string) $attributes->get('label', ''));
-        $given = $attributes->except('label')->getAttributes();
+        $given = $attributes->except(['label', 'labelled'])->getAttributes();
+
+        // Blade Icons turns any title it is given into a <title>, and throws on null.
+        if (blank($given['title'] ?? null)) {
+            unset($given['title']);
+        }
 
         if ($label !== '') {
             unset($given['aria-hidden']);
@@ -443,12 +471,16 @@ class IconRegistry
             $given['aria-hidden'] = $given['aria-hidden'] ? 'true' : 'false';
         }
 
-        if (isset($given['role']) || isset($given['aria-hidden']) || filled($given['title'] ?? null)) {
+        if (isset($given['role']) || isset($given['aria-hidden'])) {
             return new ComponentAttributeBag($given);
         }
 
         if (filled($given['aria-label'] ?? null) || filled($given['aria-labelledby'] ?? null)) {
             return new ComponentAttributeBag([...$given, 'role' => 'img']);
+        }
+
+        if (isset($given['title'])) {
+            return new ComponentAttributeBag($given);
         }
 
         return new ComponentAttributeBag([...$given, 'aria-hidden' => 'true']);

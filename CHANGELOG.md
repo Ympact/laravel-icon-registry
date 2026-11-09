@@ -32,7 +32,7 @@ All notable changes to this package are documented here. The format follows
 - Purposes: `resources/icons/purposes.php` maps a meaning such as `action.delete` to one icon and an
   accessible label. Draw one with `<x-registry-icon purpose="...">` or `renderPurpose()`, decorative
   unless `labelled`. `purposes()` lists them, `purpose()` returns the icon, an undefined purpose throws
-  `UnknownPurpose`, and `icon-registry:doctor` fails on a purpose whose icon no longer exists.
+  `UnknownPurpose`, and `icon-registry:doctor` fails on a malformed purpose or one whose icon no longer exists.
 - `icon-registry:cache`, `icon-registry:clear`, `icon-registry:doctor`, `icon-registry:search` and
   `icon-registry:export`.
   Named apart from Blade Icons' own `icons:cache` and `icons:clear`. `php artisan optimize` builds

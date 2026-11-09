@@ -24,6 +24,10 @@ class FluxIconProvider implements IconProvider
 
     protected const EXTENSION = '.blade.php';
 
+    protected const FIRST_TAG = '/<([a-z][^\s>\/]*+)((?:[^>"\']|"[^"]*"|\'[^\']*\')*+)>/i';
+
+    protected const ARIA_HIDDEN = '/\s+aria-hidden=(?:"[^"]*"|\'[^\']*\')|("[^"]*"|\'[^\']*\')/i';
+
     /**
      * @param  array{path?: string, loose_vendor?: string, flux_icons?: bool}  $options
      */
@@ -71,15 +75,18 @@ class FluxIconProvider implements IconProvider
 
     /**
      * Flux hardcodes aria-hidden="true" on its icons, which would hide a labelled icon and
-     * duplicate the attribute on a decorative one, so the opening tag gets only the given value.
+     * duplicate the attribute on a decorative one, so the first tag gets only the given value.
+     * Both patterns step over quoted values, where a ">" or an attribute-like string is just text.
      */
     protected function withAriaHidden(string $html, ?string $value): string
     {
-        return (string) preg_replace_callback('/<svg\b[^>]*>/', function (array $match) use ($value): string {
-            $tag = (string) preg_replace('/\s+aria-hidden="[^"]*"/', '', $match[0]);
+        $replaced = preg_replace_callback(self::FIRST_TAG, function (array $match) use ($value): string {
+            $attributes = preg_replace(self::ARIA_HIDDEN, '$1', $match[2]) ?? $match[2];
 
-            return $value === null ? $tag : '<svg aria-hidden="'.$value.'"'.substr($tag, strlen('<svg'));
+            return '<'.$match[1].($value === null ? '' : ' aria-hidden="'.$value.'"').$attributes.'>';
         }, $html, 1);
+
+        return $replaced ?? $html;
     }
 
     /**

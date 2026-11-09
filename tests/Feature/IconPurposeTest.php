@@ -50,15 +50,37 @@ it('throws when a purpose points at a missing icon', function (): void {
     Icons::purpose('action.gone');
 })->throws(UnknownIcon::class, 'tabler.gone');
 
-it('rejects a purpose without an icon or label', function (array $entry): void {
-    $this->workspace->purposes(['action.broken' => $entry]);
-
-    Icons::purposes();
-})->with([
+dataset('malformed purposes', [
     'no icon' => [['label' => 'Broken']],
     'no label' => [['icon' => 'tabler.trash']],
     'empty label' => [['icon' => 'tabler.trash', 'label' => ' ']],
-])->throws(InvalidArgumentException::class, 'action.broken');
+]);
+
+it('refuses to draw a malformed purpose, naming it', function (array $entry): void {
+    $this->workspace->purposes(['action.broken' => $entry]);
+
+    Icons::renderPurpose('action.broken');
+})->with('malformed purposes')->throws(UnknownPurpose::class, 'action.broken');
+
+it('keeps every other icon and purpose working beside a malformed purpose', function (array $entry): void {
+    $this->workspace->purposes([
+        'action.broken' => $entry,
+        'action.delete' => ['icon' => 'tabler.trash', 'label' => 'Delete'],
+    ]);
+
+    expect(Icons::purposes()->keys()->all())->toBe(['action.delete'])
+        ->and(Icons::render('tabler.home')->toHtml())->toContain('data-icon="home"')
+        ->and(Icons::renderPurpose('action.delete')->toHtml())->toContain('data-icon="trash"');
+})->with('malformed purposes');
+
+it('fails the doctor on a malformed purpose instead of crashing', function (): void {
+    $this->workspace->purposes(['action.broken' => ['label' => 'Broken']]);
+
+    artisan('icon-registry:doctor')
+        ->expectsOutputToContain('Purposes need both an icon and a label:')
+        ->expectsOutputToContain('action.broken')
+        ->assertFailed();
+});
 
 it('draws a purpose as decorative by default', function (): void {
     $html = Blade::render('<x-registry-icon purpose="action.delete" class="size-5" />');
@@ -137,3 +159,20 @@ it('passes the doctor when every purpose has its icon', function (): void {
 
     artisan('icon-registry:doctor')->expectsOutputToContain('Found 2 purposes.')->assertSuccessful();
 });
+
+it('does not treat labelled="false" as asking for a label', function (): void {
+    expect(Blade::render('<x-registry-icon purpose="action.delete" labelled="false" />'))
+        ->toContain('aria-hidden="true"')
+        ->not->toContain('aria-label');
+});
+
+it('falls back to the label itself when it names a translation group', function (): void {
+    app('translator')->addLines(['icons.delete' => 'Verwijderen'], 'en', '*');
+    $this->workspace->purposes(['action.delete' => ['icon' => 'tabler.trash', 'label' => 'icons']]);
+
+    expect(Icons::renderPurpose('action.delete', ['labelled' => true])->toHtml())->toContain('aria-label="icons"');
+});
+
+it('draws nothing for a purpose that was never chosen', function (?string $purpose): void {
+    expect(trim(Blade::render('<x-registry-icon :purpose="$purpose" />', ['purpose' => $purpose])))->toBe('');
+})->with([null, '']);

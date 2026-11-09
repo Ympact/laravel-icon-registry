@@ -17,7 +17,7 @@ Reports the available providers, the number of icons, metadata entries and purpo
 cache is fresh (every icon in it, including labels and aliases, matches a new scan), metadata and
 purposes for icons that no longer exist, cache entries for icons that no longer exist, and keys that
 more than one provider lists. It exits with a failure on stale metadata, a purpose whose icon is
-gone or stale cache entries, so it can run in CI. A purpose is never pruned; point it at another
+gone, a malformed purpose or stale cache entries, so it can run in CI. A purpose is never pruned; point it at another
 icon yourself.
 
 | Option | Effect |

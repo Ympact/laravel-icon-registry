@@ -2,6 +2,7 @@
 
 use BladeUI\Icons\Factory;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\File;
 use Tests\Support\IconWorkspace;
 use Ympact\IconRegistry\Facades\Icons;
 
@@ -23,7 +24,7 @@ dataset('providers', ['flux' => 'flux.home', 'blade icons' => 'heroicons.o-home'
 
 function openingTag(string $html): string
 {
-    preg_match('/<svg\b[^>]*>/', $html, $match);
+    preg_match('/<svg\b(?:[^>"\']|"[^"]*"|\'[^\']*\')*>/', $html, $match);
 
     return $match[0];
 }
@@ -100,3 +101,49 @@ it('escapes a dynamic label from the component exactly once', function (string $
 
     expect(openingTag($html))->toContain('aria-label="Save &amp; &quot;close&quot;"');
 })->with('providers');
+
+it('finds the end of the tag past a > in an attribute value', function (string $key): void {
+    $tag = openingTag(Blade::render('<x-registry-icon :icon="$key" label="Home" x-show="count > 0" />', ['key' => $key]));
+
+    expect($tag)->toContain('aria-label="Home"')->not->toContain('aria-hidden');
+})->with('providers');
+
+it('writes aria-hidden once on a decorative icon past a > in an attribute value', function (): void {
+    $tag = openingTag(Blade::render('<x-registry-icon icon="flux.home" x-show="count > 0" />'));
+
+    expect(substr_count($tag, 'aria-hidden='))->toBe(1);
+});
+
+it('keeps the image role when an aria-label comes with a title', function (string $key): void {
+    expect(openingTag(Icons::render($key, ['aria-label' => 'Home', 'title' => 'Go home'])->toHtml()))
+        ->toContain('role="img"')
+        ->not->toContain('aria-hidden');
+})->with('providers');
+
+it('treats a blank title as no title', function (string $key, ?string $title): void {
+    $tag = openingTag(Blade::render('<x-registry-icon :icon="$key" :title="$title" />', ['key' => $key, 'title' => $title]));
+
+    expect($tag)->toContain('aria-hidden="true"')->not->toContain('role=')->not->toContain('title=');
+})->with('providers')->with(['null' => null, 'empty' => '']);
+
+it('does not render labelled on an icon drawn by key', function (string $key): void {
+    expect(openingTag(Icons::render($key, ['labelled' => true])->toHtml()))->not->toContain('labelled');
+})->with('providers');
+
+it('handles single-quoted aria-hidden and a quoted mention in custom Flux icons', function (): void {
+    $this->workspace->flux(['custom' => ['quoted']]);
+    File::put("{$this->workspace->fluxPath}/custom/quoted.blade.php", "<svg {{ \$attributes }} x-text=\" aria-hidden='kept'\" aria-hidden='true'></svg>");
+    app('view')->prependNamespace(hash('xxh128', 'flux'), dirname($this->workspace->fluxPath));
+
+    expect(openingTag(Icons::render('custom.quoted', ['label' => 'Home'])->toHtml()))
+        ->toContain("x-text=\" aria-hidden='kept'\"")
+        ->not->toContain("aria-hidden='true'");
+});
+
+it('hides a custom Flux icon that is not an svg', function (): void {
+    File::ensureDirectoryExists("{$this->workspace->fluxPath}/custom");
+    File::put("{$this->workspace->fluxPath}/custom/font.blade.php", '<i {{ $attributes }} class="glyph"></i>');
+    app('view')->prependNamespace(hash('xxh128', 'flux'), dirname($this->workspace->fluxPath));
+
+    expect(Icons::render('custom.font')->toHtml())->toContain('<i aria-hidden="true"');
+});

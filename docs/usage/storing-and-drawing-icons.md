@@ -79,14 +79,16 @@ Icons::renderPurpose('status.overdue', ['labelled' => true]);
 ```
 
 A purpose is decorative like any icon, because next to visible text a name would be announced
-twice. `labelled` names it with the purpose's label; `label` replaces that when the context says
+twice. `labelled` names it with the purpose's label and only applies to a purpose; `label` replaces that when the context says
 more ("Delete invoice"). When both `purpose` and `icon` are given, `purpose` is drawn.
 
-An undefined purpose throws `Ympact\IconRegistry\Exceptions\UnknownPurpose`. `icon-registry:doctor`
-fails on a purpose whose icon no longer exists.
+An undefined purpose, or one without an icon or a label, throws
+`Ympact\IconRegistry\Exceptions\UnknownPurpose` when drawn; other icons and purposes keep working.
+`icon-registry:doctor` fails on a malformed purpose and on one whose icon no longer exists.
 
 Drawing reads the purposes file directly, so changing a purpose's icon needs no cache rebuild.
-Search does use the cached purposes: run `icon-registry:cache` to make it find the change.
+Search and `Icon::$purposes` use the cached copy, and the doctor reports that cache as stale: run
+`icon-registry:cache` to update them.
 
 ## Accessibility
 
@@ -107,7 +109,8 @@ Icons::render('tabler.alert-circle', ['label' => __('Overdue')]);
 | `label="Overdue"` | `role="img" aria-label="Overdue"`; `label` itself is not rendered, and it replaces any `aria-hidden` |
 | an empty or null `label` | decorative, so `:label="$maybeEmpty"` is safe |
 | `aria-label` or `aria-labelledby` | those, plus `role="img"` and no `aria-hidden` |
-| `title` | as given, not hidden; Blade Icons turns it into a `<title>` element with `role="img"` |
+| `title` | as given, not hidden. Blade Icons turns it into a `<title>` element with `role="img"`; on Flux it is only an attribute and names nothing reliably, so use `label` |
+| a blank `title` | ignored |
 | `role` or `aria-hidden`, without a label | as given |
 
 The registry does not fall back to the icon's metadata label: that names the picture ("Trash"),

@@ -36,6 +36,7 @@ class DoctorCommand extends Command
 
         $this->listKeys('Metadata exists for missing icons:', $report['orphaned_metadata']);
         $this->listKeys('Purposes point at missing icons:', $report['orphaned_purposes']);
+        $this->listKeys('Purposes need both an icon and a label:', $report['malformed_purposes']);
         $this->listKeys('Cache contains icons that no longer exist:', $report['stale_cache_entries']);
         $this->listKeys('Listed by more than one provider (the first configured wins):', $report['shadowed_icons']);
 
@@ -45,7 +46,7 @@ class DoctorCommand extends Command
 
         $this->repair($registry);
 
-        return $report['orphaned_metadata'] !== [] || $report['orphaned_purposes'] !== [] || $report['stale_cache_entries'] !== []
+        return $report['orphaned_metadata'] !== [] || $report['orphaned_purposes'] !== [] || $report['malformed_purposes'] !== [] || $report['stale_cache_entries'] !== []
             ? self::FAILURE
             : self::SUCCESS;
     }

@@ -78,7 +78,7 @@ It recognises:
 
 - `<flux:icon.home />`, `<flux:icon name="home" />`, and `icon`, `icon:leading` and `icon:trailing`
   (or `icon-leading`, `icon-trailing`) on any Flux or `x-` component;
-- `<x-icon-registry::icon icon="tabler.home" />`, `<x-icon name="..." />` and Blade Icons
+- `<x-registry-icon icon="tabler.home" />` (or the tag set in `component`), `<x-icon name="..." />` and Blade Icons
   components such as `<x-heroicon-o-home />`;
 - `@svg('...')`, `svg('...')` and `Icons::render('...')`;
 - in PHP, `'icon' => '...'`, `$icon = '...'`, `icon: '...'`, `->icon('...')`, and any string that

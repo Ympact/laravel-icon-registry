@@ -34,7 +34,7 @@ it('resolves every way a Blade template names an icon to its registry key', func
         <flux:button icon="tabler.trash" />
         <flux:button icon:trailing="chevron-up" />
         <x-heroicon-o-bell />
-        <x-icon-registry::icon icon="tabler.home" />
+        <x-registry-icon icon="tabler.home" />
         BLADE);
 
     expect(array_keys($report->icons()))->toBe(['app.chevron-up', 'app.star', 'heroicons.o-bell', 'tabler.home', 'tabler.trash'])
@@ -423,4 +423,12 @@ it('adds a new entry after its vendor and keeps the section banner and order in 
     expect(array_keys(require $this->workspace->metadataPath))->toBe(['app.star', 'tabler.trash', 'tabler.chart', 'tabler.home'])
         ->and(strpos($written, "'app.star'"))->toBeLessThan(strpos($written, 'tabler section'))
         ->and(strpos($written, 'tabler section'))->toBeLessThan(strpos($written, "'tabler.trash'"));
+});
+
+it('recognises the Blade tag the application configured', function (): void {
+    config()->set('icon-registry.component', 'my-icon');
+
+    $report = ($this->scan)('page.blade.php', '<x-my-icon icon="missing" /><x-registry-icon icon="also-missing" />');
+
+    expect(array_map(fn (IconUsage $usage) => $usage->reference, $report->unknown()))->toBe(['missing']);
 });

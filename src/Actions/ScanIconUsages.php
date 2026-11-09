@@ -2,6 +2,7 @@
 
 namespace Ympact\IconRegistry\Actions;
 
+use Illuminate\Config\Repository;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 use Ympact\IconRegistry\Icon;
@@ -64,6 +65,7 @@ class ScanIconUsages
     public function __construct(
         protected IconRegistry $registry,
         protected Filesystem $files,
+        protected Repository $config,
     ) {}
 
     /**
@@ -217,7 +219,7 @@ class ScanIconUsages
             return [[substr($tag, strlen('flux:icon.')), false]];
         }
 
-        $isIconTag = in_array($tag, ['flux:icon', 'x-icon', 'x-icon-registry::icon'], true);
+        $isIconTag = in_array($tag, ['flux:icon', 'x-icon', 'x-'.$this->config->string('icon-registry.component')], true);
         $strict = $isIconTag || str_starts_with($tag, 'flux:');
         $names = $isIconTag ? [...self::ICON_ATTRIBUTES, 'name'] : self::ICON_ATTRIBUTES;
 

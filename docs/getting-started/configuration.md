@@ -24,7 +24,7 @@ Lists what `<flux:icon>` can draw. Requires `livewire/flux`.
 | --- | --- | --- |
 | `providers.flux.path` | `resource_path('views/flux/icon')` | The application's icon directory. Each subdirectory is a vendor (`tabler/home.blade.php` is `tabler.home`); loose files go under `loose_vendor`. `index.blade.php`, an override of Flux's icon component, is not listed. |
 | `providers.flux.loose_vendor` | `app` | The vendor for loose files in `path`: `save.blade.php` is `app.save`. |
-| `providers.flux.flux_icons` | `true` | List the icons that ship with Flux, under the vendor `flux`. An application file of the same name replaces the Flux icon, as it does when Flux draws it. |
+| `providers.flux.flux_icons` | `true` | List the icons that ship with Flux, under the vendor `flux`. An application file of the same name is what Flux draws for that name, so `flux.home` keeps resolving and is listed next to `app.home`. |
 
 ## The `blade-icons` provider
 

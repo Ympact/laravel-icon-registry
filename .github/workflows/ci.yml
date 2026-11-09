@@ -56,7 +56,7 @@ jobs:
         shell: bash
         run: .github/scripts/composer-package-repos.sh >> "$GITHUB_OUTPUT"
 
-      - uses: actions/create-github-app-token@v2
+      - uses: actions/create-github-app-token@v3
         id: app-token
         if: steps.packages.outputs.list != ''
         continue-on-error: true

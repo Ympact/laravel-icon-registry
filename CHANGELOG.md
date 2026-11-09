@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-09
+
 ### Added
 
 - A `hidden` flag on a metadata entry. A hidden icon is left out of `search()`, `icon-registry:search`,

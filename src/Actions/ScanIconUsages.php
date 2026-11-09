@@ -16,7 +16,7 @@ use Ympact\IconRegistry\IconUsageReport;
 class ScanIconUsages
 {
     /** A word from the reference's own label, slot or action says more than one from its file path. */
-    public const WEIGHT_CONTEXT = 3;
+    protected const WEIGHT_CONTEXT = 3;
 
     protected const WEIGHT_PATH = 1;
 
@@ -25,8 +25,11 @@ class ScanIconUsages
     /** How far a closing tag may be for the text before it to still describe the icon. */
     protected const MAXIMUM_SLOT_LENGTH = 500;
 
-    /** How many lines either side of a PHP reference can hold its label. */
-    protected const CONTEXT_LINES = 3;
+    /** How many bytes either side of a PHP reference to search for the bounds of its array or chain. */
+    protected const CONTEXT_REACH = 400;
+
+    /** How far back to look for the function a string is the first argument of. */
+    protected const LOOKUP_REACH = 40;
 
     /** Quoted values and `{{ }}` are skipped whole, so a `>` inside them does not end the tag. */
     protected const TAG_PATTERN = '/<((?:flux:|x-)[\w.:\-]*)((?:\{\{.*?\}\}|"[^"]*+"|\'[^\']*+\'|[-=]>|[^\'">])*+)>/s';
@@ -37,11 +40,17 @@ class ScanIconUsages
 
     protected const CONTEXT_ATTRIBUTES = ['label', 'title', 'aria-label', 'tooltip', 'heading', 'placeholder', 'href'];
 
-    protected const CALL_PATTERN = '/(?:(?<![\w>:$])@?svg|\bIcons::render)\(\s*([\'"])(.+?)\1/';
+    protected const CALL_PATTERN = '/(?:(?<![\w>:$])@?svg|\bIcons::render)\(\s*([\'"])([^\'"]+)\1(?=\s*[,)])/';
 
     protected const ICON_VALUE_PATTERN = '/(?:[\'"]\w*icon\w*[\'"]\s*=>|\$\w*icon\w*\s*=|\bicon:|->\w*icon\w*\()\s*([\'"])([\w.:\-]+)\1/i';
 
     protected const STORED_KEY_PATTERN = '/([\'"])([\w\-]+\.[\w.\-]+)\1/';
+
+    /** A string here names a route, config value, view or translation, even if it equals an icon key. */
+    protected const NAMED_LOOKUP_PATTERN = '/(?:\b(?:route|to_route|config|view|__|trans|trans_choice|lang|include|includeIf|extends|can|cannot)|->(?:name|route|view|can)|::get)\(\s*$/i';
+
+    /** Bound values that switch an icon off rather than choose one at runtime. */
+    protected const NO_ICON_EXPRESSIONS = ['null', 'false', "''", '""'];
 
     protected const LABEL_PATTERN = '/(?:[\'"]?\b(?:label|title|heading|tooltip)[\'"]?\s*(?:=>|:)|->(?:label|title|heading|tooltip)\()\s*(?:__\(\s*)?[\'"]([^\'"]+)[\'"]/i';
 
@@ -99,26 +108,24 @@ class ScanIconUsages
         $source = $this->withoutComments($path);
         $displayPath = Str::after($path, base_path().DIRECTORY_SEPARATOR);
         $pathWeights = $this->weigh($this->words(str_replace('.blade.php', '', $relativePath)), self::WEIGHT_PATH);
-        $found = [...$this->referencesInTags($source, $resolver), ...$this->referencesInPhp($source, $resolver)];
-
+        $inTags = $this->referencesInTags($source, $resolver);
         $usages = [];
 
-        foreach ($found as $reference) {
+        foreach ([...$inTags, ...$this->referencesInPhp($source, $resolver, $inTags)] as $reference) {
             $key = $resolver[$reference['reference']] ?? null;
-            $dedupe = ($key ?? $reference['reference']).':'.$reference['line'];
 
-            // A tag is read first, so its richer context survives when PHP patterns see it again.
-            $usages[$dedupe] ??= new IconUsage(
+            $usages[] = new IconUsage(
                 reference: $reference['reference'],
                 key: $key,
                 file: $displayPath,
                 line: $reference['line'],
                 keywords: $this->keywords($reference['words'], $pathWeights, $key),
+                contextKeywords: array_values(array_unique(array_diff($reference['words'], $this->words((string) $key)))),
                 dynamic: $reference['dynamic'],
             );
         }
 
-        return array_values($usages);
+        return $usages;
     }
 
     /**
@@ -149,7 +156,7 @@ class ScanIconUsages
 
     /**
      * @param  array<string, string>  $resolver
-     * @return list<array{reference: string, line: int, words: list<string>, dynamic: bool}>
+     * @return list<array{reference: string, line: int, words: list<string>, dynamic: bool, start: int, end: int}>
      */
     protected function referencesInTags(string $source, array $resolver): array
     {
@@ -172,7 +179,7 @@ class ScanIconUsages
             $line = $this->lineAt($source, $offset);
 
             foreach ($references as [$reference, $dynamic]) {
-                $found[] = ['reference' => $reference, 'line' => $line, 'words' => $words, 'dynamic' => $dynamic];
+                $found[] = ['reference' => $reference, 'line' => $line, 'words' => $words, 'dynamic' => $dynamic, 'start' => $offset, 'end' => $offset + strlen($whole)];
             }
         }
 
@@ -234,7 +241,7 @@ class ScanIconUsages
      */
     protected function attributeReferences(string $value, bool $bound, bool $strict, array $resolver): array
     {
-        if ($value === '') {
+        if ($value === '' || ($bound && in_array(strtolower(trim($value)), self::NO_ICON_EXPRESSIONS, true))) {
             return [];
         }
 
@@ -309,49 +316,121 @@ class ScanIconUsages
             $value,
         );
 
-        return (string) preg_replace(['/<[^>]*>/', '/@\w+(\([^)]*\))?/', '/\$\w+/', '#https?://[^/\s]+#'], ' ', $echoesResolved);
+        return (string) preg_replace(['/<[^>]*>/', '/@\w+(\s*(\((?:[^()]++|(?2))*\)))?/', '/\$\w+(?:(?:\??->|::)\w+)*/', '#https?://[^/\s]+#'], ' ', $echoesResolved);
     }
 
     /**
      * @param  array<string, string>  $resolver
-     * @return list<array{reference: string, line: int, words: list<string>, dynamic: bool}>
+     * @param  list<array{reference: string, line: int, words: list<string>, dynamic: bool, start: int, end: int}>  $inTags
+     * @return list<array{reference: string, line: int, words: list<string>, dynamic: bool, start: int, end: int}>
      */
-    protected function referencesInPhp(string $source, array $resolver): array
+    protected function referencesInPhp(string $source, array $resolver, array $inTags): array
     {
-        $lines = explode("\n", $source);
         $found = [];
 
         foreach ([self::CALL_PATTERN => true, self::ICON_VALUE_PATTERN => false, self::STORED_KEY_PATTERN => false] as $pattern => $strict) {
             preg_match_all($pattern, $source, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
 
             foreach ($matches as $match) {
-                $reference = $match[2][0];
+                [$reference, $literalOffset] = $match[2];
+                $offset = $match[0][1];
 
-                if (! isset($resolver[$reference]) && ! $strict) {
+                // Several patterns can match one literal, and a tag has already read its own.
+                if (isset($found[$literalOffset]) || (! $strict && ! isset($resolver[$reference])) || $this->isReadByTag($reference, $literalOffset, $inTags)) {
                     continue;
                 }
 
-                $line = $this->lineAt($source, $match[0][1]);
+                if ($pattern === self::STORED_KEY_PATTERN && $this->isNamedLookup($source, $offset)) {
+                    continue;
+                }
 
-                $found[] = ['reference' => $reference, 'line' => $line, 'words' => $this->nearbyLabelWords($lines, $line), 'dynamic' => false];
+                $found[$literalOffset] = [
+                    'reference' => $reference,
+                    'line' => $this->lineAt($source, $offset),
+                    'words' => $this->labelWordsAround($source, $offset, str_starts_with($match[0][0], '->')),
+                    'dynamic' => false,
+                    'start' => $offset,
+                    'end' => $offset + strlen($match[0][0]),
+                ];
             }
         }
 
-        return $found;
+        return array_values($found);
     }
 
     /**
-     * @param  list<string>  $lines
+     * @param  list<array{reference: string, line: int, words: list<string>, dynamic: bool, start: int, end: int}>  $inTags
+     */
+    protected function isReadByTag(string $reference, int $offset, array $inTags): bool
+    {
+        foreach ($inTags as $tag) {
+            if ($tag['reference'] === $reference && $offset >= $tag['start'] && $offset < $tag['end']) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function isNamedLookup(string $source, int $offset): bool
+    {
+        $start = max(0, $offset - self::LOOKUP_REACH);
+
+        return preg_match(self::NAMED_LOOKUP_PATTERN, substr($source, $start, $offset - $start)) === 1;
+    }
+
+    /**
+     * Labels that belong to the same item as the reference: its own array, or for a fluent call
+     * its own chain. A label nested deeper belongs to something inside that item.
+     *
      * @return list<string>
      */
-    protected function nearbyLabelWords(array $lines, int $line): array
+    protected function labelWordsAround(string $source, int $offset, bool $isFluentCall): array
     {
-        $start = max(0, $line - 1 - self::CONTEXT_LINES);
-        $window = implode("\n", array_slice($lines, $start, self::CONTEXT_LINES * 2 + 1));
+        $start = $this->itemBoundary($source, $offset - 1, -1, $isFluentCall);
+        $item = substr($source, $start, $this->itemBoundary($source, $offset, 1, $isFluentCall) - $start);
 
-        preg_match_all(self::LABEL_PATTERN, $window, $matches);
+        preg_match_all(self::LABEL_PATTERN, $item, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
 
-        return $this->words(implode(' ', $matches[1]));
+        $words = [];
+
+        foreach ($matches as $match) {
+            $before = substr($item, 0, $match[0][1]);
+
+            if (preg_match_all('/[(\[{]/', $before) === preg_match_all('/[)\]}]/', $before)) {
+                array_push($words, ...$this->words($match[1][0]));
+            }
+        }
+
+        return $words;
+    }
+
+    /**
+     * The offset where the item around a position ends, walking in one direction: the first
+     * unmatched bracket or statement end, and for a fluent call also the next list comma.
+     *
+     * @param  int  $step  -1 to walk backwards, 1 to walk forwards.
+     */
+    protected function itemBoundary(string $source, int $from, int $step, bool $stopAtComma): int
+    {
+        $depth = 0;
+        $length = strlen($source);
+
+        for ($position = $from, $walked = 0; $position >= 0 && $position < $length && $walked < self::CONTEXT_REACH; $position += $step, $walked++) {
+            $character = $source[$position];
+            $opens = str_contains($step === 1 ? '([{' : ')]}', $character);
+            $closes = str_contains($step === 1 ? ')]}' : '([{', $character);
+
+            if ($opens) {
+                $depth++;
+            } elseif ($closes && $depth > 0) {
+                $depth--;
+            } elseif ($closes || ($depth === 0 && ($character === ';' || ($stopAtComma && $character === ',')))) {
+                return $step === 1 ? $position : $position + 1;
+            }
+        }
+
+        return $step === 1 ? min($position, $length) : max($position + 1, 0);
     }
 
     /**

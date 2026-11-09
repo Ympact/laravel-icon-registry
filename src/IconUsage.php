@@ -14,6 +14,7 @@ final readonly class IconUsage implements JsonSerializable
      * @param  string  $reference  The icon name as written, or the expression when dynamic.
      * @param  string|null  $key  The registry key, or null when the reference did not resolve.
      * @param  array<string, int>  $keywords  Context words, each weighted by where it was found.
+     * @param  list<string>  $contextKeywords  Those found at the reference itself, not in the file path.
      */
     public function __construct(
         public string $reference,
@@ -21,6 +22,7 @@ final readonly class IconUsage implements JsonSerializable
         public string $file,
         public int $line,
         public array $keywords = [],
+        public array $contextKeywords = [],
         public bool $dynamic = false,
     ) {}
 

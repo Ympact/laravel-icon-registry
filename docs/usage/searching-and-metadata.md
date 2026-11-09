@@ -79,11 +79,12 @@ It recognises:
   components such as `<x-heroicon-o-home />`;
 - `@svg('...')`, `svg('...')` and `Icons::render('...')`;
 - in PHP, `'icon' => '...'`, `$icon = '...'`, `icon: '...'`, `->icon('...')`, and any string that
-  is exactly a registry key.
+  is exactly a registry key, unless it is the first argument of a lookup such as `route()`,
+  `config()`, `view()` or `__()`.
 
 Keywords come from the reference's `label`, `title`, `aria-label`, `tooltip`, `heading`,
 `placeholder`, `href` and `wire:click`, its slot or the text after it on the same line, a label
-within three lines of a PHP reference, and more weakly the file's path. Only the strings inside a
+in the same PHP array or fluent chain, and more weakly the file's path. Only the strings inside a
 Blade echo count, so `{{ __('Delete') }}` gives "delete" and `{{ $user->name }}` gives nothing.
 Words in the icon's own key are left out.
 
@@ -109,6 +110,6 @@ the file. `--force` skips the question. It only appends to `use_cases`, and:
   nothing new unless the source changed;
 - creates an entry for an icon that has none, and rebuilds the cache if one exists.
 
-The file is rewritten the same way as `icon-registry:doctor --prune-meta`, so entries end up sorted
-by key and the comments are kept as described above. The keywords are single words taken from your
+Existing entries keep their order and comments. A new entry goes after the last one of its vendor;
+a vendor new to the file goes at the top, above any section banner. The keywords are single words taken from your
 source, not curated use cases like `action.delete`, so review the diff before committing it.

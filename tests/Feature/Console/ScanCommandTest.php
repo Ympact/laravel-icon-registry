@@ -272,3 +272,155 @@ describe('--write', function (): void {
             ->assertFailed();
     });
 });
+
+it('does not give the items of a compact PHP menu each other\'s labels', function (): void {
+    $report = ($this->scan)('Nav.php', <<<'PHP'
+        <?php
+        return [
+            ['label' => 'Start', 'icon' => 'tabler.home'],
+            ['label' => 'Remove', 'icon' => 'tabler.trash'],
+        ];
+        PHP);
+
+    expect($report->icons()['tabler.home']['usages'][0]->contextKeywords)->toBe(['start'])
+        ->and($report->icons()['tabler.trash']['usages'][0]->contextKeywords)->toBe(['remove']);
+});
+
+it('keeps a label to its own array and ignores labels nested deeper', function (): void {
+    $report = ($this->scan)('Nav.php', <<<'PHP'
+        <?php
+        return [
+            [
+                'icon' => 'tabler.home',
+                'children' => [['label' => 'Nested']],
+                'label' => 'Start',
+            ],
+            [
+                'label' => 'Remove',
+                'icon' => 'tabler.trash',
+            ],
+        ];
+        PHP);
+
+    expect($report->icons()['tabler.home']['usages'][0]->contextKeywords)->toBe(['start'])
+        ->and($report->icons()['tabler.trash']['usages'][0]->contextKeywords)->toBe(['remove']);
+});
+
+it('keeps a label to its own fluent chain', function (): void {
+    $report = ($this->scan)('Actions.php', <<<'PHP'
+        <?php
+        return [
+            Action::make('a')->label('Start')->icon('tabler.home'),
+            Action::make('b')
+                ->icon('tabler.trash')
+                ->label('Remove'),
+        ];
+        PHP);
+
+    expect($report->icons()['tabler.home']['usages'][0]->contextKeywords)->toBe(['start'])
+        ->and($report->icons()['tabler.trash']['usages'][0]->contextKeywords)->toBe(['remove']);
+});
+
+it('counts a tag spread over several lines once, at its opening line', function (): void {
+    $report = ($this->scan)('page.blade.php', "<flux:button\n  icon=\"tabler.home\"\n  tooltip=\"Start\"\n/>");
+
+    expect($report->icons()['tabler.home']['usages'])->toHaveCount(1)
+        ->and($report->icons()['tabler.home']['usages'][0]->line)->toBe(1);
+});
+
+it('still finds an icon in a PHP array bound on a tag that uses another icon', function (): void {
+    $report = ($this->scan)('page.blade.php', "<flux:button icon=\"tabler.home\"\n  :items=\"[['icon' => 'tabler.trash']]\" />");
+
+    expect(array_keys($report->icons()))->toBe(['tabler.home', 'tabler.trash']);
+});
+
+it('counts every reference on a line and keeps the keywords of each', function (): void {
+    $report = ($this->scan)('page.blade.php', '<flux:button icon="star">Like</flux:button><flux:button icon="star">Favourite</flux:button>');
+
+    expect($report->icons()['app.star']['usages'])->toHaveCount(2)
+        ->and($report->icons()['app.star']['keywords'])->toContain('like', 'favourite');
+});
+
+it('does not take keywords from the code in directives and action arguments', function (): void {
+    $report = ($this->scan)('page.blade.php', <<<'BLADE'
+        <flux:button icon="star" wire:click="remove($user->profile)">
+            @if (in_array($user->isAdmin, ['staff']))
+                Save
+            @endif
+        </flux:button>
+        BLADE);
+
+    expect($report->icons()['app.star']['usages'][0]->contextKeywords)->toEqualCanonicalizing(['remove', 'save']);
+});
+
+it('does not take route, config, view or translation names for stored keys', function (): void {
+    $report = ($this->scan)('Nav.php', <<<'PHP'
+        <?php
+        route('tabler.home');
+        config('tabler.home');
+        view('tabler.home');
+        __('tabler.home');
+        Route::get('/')->name('tabler.home');
+        PHP);
+
+    expect($report->icons())->toBe([]);
+});
+
+it('still finds a stored key passed to something that is not a named lookup', function (): void {
+    $report = ($this->scan)('Nav.php', "<?php\n\$item->update(['glyph' => 'tabler.home']);\nremember('tabler.trash');\n");
+
+    expect(array_keys($report->icons()))->toBe(['tabler.home', 'tabler.trash']);
+});
+
+it('does not report the first half of a concatenated name as an unknown icon', function (): void {
+    $report = ($this->scan)('a.php', "<?php\nsvg('heroicon-'.\$name);\nsvg('missing', 'size-5');\n");
+
+    expect(array_map(fn (IconUsage $usage) => $usage->reference, $report->unknown()))->toBe(['missing']);
+});
+
+it('does not list a bound constant that means no icon as dynamic', function (): void {
+    $report = ($this->scan)('page.blade.php', '<flux:button :icon="null" :icon-trailing="false" :icon:leading="\'\'" />');
+
+    expect($report->dynamic())->toBe([]);
+});
+
+it('never writes a word that only comes from the file path, however often it repeats', function (): void {
+    ($this->scan)('users/users/users.blade.php', '<flux:button icon="star">Favourite</flux:button>');
+
+    artisan('icon-registry:scan', ['--path' => [$this->source], '--write' => true, '--force' => true])->assertSuccessful();
+
+    expect((require $this->workspace->metadataPath)['app.star']['use_cases'])->toBe(['favourite']);
+});
+
+it('adds a new entry after its vendor and keeps the section banner and order in place', function (): void {
+    File::ensureDirectoryExists(dirname($this->workspace->metadataPath));
+    File::put($this->workspace->metadataPath, <<<'PHP'
+        <?php
+
+        return [
+
+            // ------
+            // tabler section
+            // ------
+
+            'tabler.trash' => [
+                'label' => 'Weg',
+            ],
+
+            'tabler.chart' => [
+                'label' => 'Grafiek',
+            ],
+
+        ];
+        PHP);
+
+    ($this->scan)('page.blade.php', '<flux:button icon="tabler.home">Start</flux:button><flux:button icon="star">Favourite</flux:button>');
+
+    artisan('icon-registry:scan', ['--path' => [$this->source], '--write' => true, '--force' => true])->assertSuccessful();
+
+    $written = File::get($this->workspace->metadataPath);
+
+    expect(array_keys(require $this->workspace->metadataPath))->toBe(['app.star', 'tabler.trash', 'tabler.chart', 'tabler.home'])
+        ->and(strpos($written, "'app.star'"))->toBeLessThan(strpos($written, 'tabler section'))
+        ->and(strpos($written, 'tabler section'))->toBeLessThan(strpos($written, "'tabler.trash'"));
+});

@@ -2,8 +2,11 @@
 
 namespace Ympact\IconRegistry\Actions;
 
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Ympact\IconRegistry\IconRegistry;
+use Ympact\IconRegistry\IconSearch;
+use Ympact\IconRegistry\IconUsage;
 use Ympact\IconRegistry\IconUsageReport;
 
 /**
@@ -15,7 +18,10 @@ class AddIconUseCases
     /** Few enough that a curated entry is not swamped by words from one scan. */
     protected const MAXIMUM_PER_ICON = 5;
 
-    public function __construct(protected IconRegistry $registry) {}
+    public function __construct(
+        protected IconRegistry $registry,
+        protected IconSearch $search,
+    ) {}
 
     /**
      * The use cases a write would add, by icon key, leaving out what the entry already says.
@@ -29,13 +35,8 @@ class AddIconUseCases
         $additions = [];
 
         foreach ($report->icons() as $key => $icon) {
-            $contextual = [];
-
-            foreach ($icon['usages'] as $usage) {
-                $contextual += array_filter($usage->keywords, fn (int $weight) => $weight >= ScanIconUsages::WEIGHT_CONTEXT);
-            }
-
-            $strongest = array_slice(array_values(array_filter($icon['keywords'], fn (string $word) => isset($contextual[$word]))), 0, self::MAXIMUM_PER_ICON);
+            $contextual = array_merge(...array_map(fn (IconUsage $usage) => $usage->contextKeywords, $icon['usages']));
+            $strongest = array_slice(array_values(array_intersect($icon['keywords'], $contextual)), 0, self::MAXIMUM_PER_ICON);
             $new = array_values(array_diff($strongest, $this->wordsIn($metadata[$key] ?? [])));
 
             if ($new !== []) {
@@ -49,7 +50,8 @@ class AddIconUseCases
     }
 
     /**
-     * Rereads the file, so an edit made while the preview was on screen is kept.
+     * Rereads the file, so an edit made while the preview was on screen is kept. Existing entries
+     * keep their order, so a hand-kept section stays under its banner.
      *
      * @param  array<string, list<string>>  $additions
      */
@@ -62,12 +64,34 @@ class AddIconUseCases
             $entry = $metadata[$key] ?? [];
             $entry['use_cases'] = [...array_values($entry['use_cases'] ?? []), ...$useCases];
 
-            $metadata[$key] = $file->normalizeEntry($entry);
+            $isNew = ! isset($metadata[$key]);
+            $entry = $file->normalizeEntry($entry);
+
+            if ($isNew) {
+                $metadata = $this->insertedByVendor($metadata, $key, $entry);
+            } else {
+                $metadata[$key] = $entry;
+            }
         }
 
-        ksort($metadata);
-
         $file->write($metadata);
+    }
+
+    /**
+     * Places an entry after the last one of its vendor. A vendor new to the file goes first,
+     * above any banner, because anywhere else it would read as part of another section.
+     *
+     * @param  array<string, array<string, mixed>>  $metadata
+     * @param  array<string, mixed>  $entry
+     * @return array<string, array<string, mixed>>
+     */
+    protected function insertedByVendor(array $metadata, string $key, array $entry): array
+    {
+        $vendor = Str::before($key, '.');
+        $sameVendor = array_keys(array_filter(array_keys($metadata), fn (string $existing) => Str::before($existing, '.') === $vendor));
+        $position = $sameVendor === [] ? 0 : Arr::last($sameVendor) + 1;
+
+        return array_slice($metadata, 0, $position, true) + [$key => $entry] + array_slice($metadata, $position, null, true);
     }
 
     /**
@@ -78,6 +102,6 @@ class AddIconUseCases
     {
         $phrases = [(string) ($entry['label'] ?? ''), ...($entry['aliases'] ?? []), ...($entry['use_cases'] ?? [])];
 
-        return preg_split('/[\s._-]+/', Str::lower(implode(' ', $phrases)), flags: PREG_SPLIT_NO_EMPTY) ?: [];
+        return $this->search->tokens(Str::lower(implode(' ', $phrases)));
     }
 }

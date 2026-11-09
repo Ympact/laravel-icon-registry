@@ -251,3 +251,119 @@ it('creates a metadata file that is not executable', function (): void {
 
     expect(fileperms($this->workspace->metadataPath) & 0777)->toBe(0666 & ~umask());
 });
+
+it('keeps the order of the entries when it prunes, so a section stays under its banner', function (): void {
+    writeMetadataFixture($this->workspace->metadataPath, <<<'PHP'
+
+            // ----------------------------------------------------------
+            // tabler.*: our default set
+            // ----------------------------------------------------------
+
+            'tabler.trash' => [
+                'label' => 'Delete',
+            ],
+
+            'tabler.gone' => [
+                'label' => 'Gone',
+            ],
+
+            'tabler.home' => [
+                'label' => 'Home',
+            ],
+
+            'acme.labels' => [
+                'label' => 'Labels',
+            ],
+        PHP);
+
+    app(IconRegistry::class)->cleanMetadata(write: true);
+
+    $written = File::get($this->workspace->metadataPath);
+
+    expect(array_keys(require $this->workspace->metadataPath))->toBe(['tabler.trash', 'tabler.home', 'acme.labels'])
+        ->and(strpos($written, 'our default set'))->toBeLessThan(strpos($written, "'tabler.trash'"));
+});
+
+it('moves a banner to the next entry of its section, not to an earlier one', function (): void {
+    writeMetadataFixture($this->workspace->metadataPath, <<<'PHP'
+
+            'tabler.home' => [
+                'label' => 'Home',
+            ],
+
+            // ------
+            // Actions
+            // ------
+
+            'tabler.gone' => [
+                'label' => 'Gone',
+            ],
+
+            'tabler.trash' => [
+                'label' => 'Delete',
+            ],
+        PHP);
+
+    app(IconRegistry::class)->cleanMetadata(write: true);
+
+    $written = File::get($this->workspace->metadataPath);
+
+    expect(strpos($written, "'tabler.home'"))->toBeLessThan(strpos($written, 'Actions'))
+        ->and(strpos($written, 'Actions'))->toBeLessThan(strpos($written, "'tabler.trash'"));
+});
+
+it('keeps the banner of a section that continues with another vendor', function (): void {
+    writeMetadataFixture($this->workspace->metadataPath, <<<'PHP'
+
+            // ------
+            // Mixed section
+            // ------
+
+            'tabler.gone' => [
+                'label' => 'Gone',
+            ],
+
+            'acme.labels' => [
+                'label' => 'Labels',
+            ],
+        PHP);
+
+    app(IconRegistry::class)->cleanMetadata(write: true);
+
+    $written = File::get($this->workspace->metadataPath);
+
+    expect($written)->toContain('Mixed section')
+        ->and(strpos($written, 'Mixed section'))->toBeLessThan(strpos($written, "'acme.labels'"));
+});
+
+it('drops the banner of a section left empty, without taking over the next section', function (): void {
+    writeMetadataFixture($this->workspace->metadataPath, <<<'PHP'
+
+            // ------
+            // First
+            // ------
+
+            'tabler.gone' => [
+                'label' => 'Gone',
+            ],
+
+            // ------
+            // Second
+            // ------
+
+            'tabler.gone2' => [
+                'label' => 'Gone too',
+            ],
+
+            'tabler.home' => [
+                'label' => 'Home',
+            ],
+        PHP);
+
+    app(IconRegistry::class)->cleanMetadata(write: true);
+
+    $written = File::get($this->workspace->metadataPath);
+
+    expect($written)->not->toContain('First')
+        ->and(strpos($written, 'Second'))->toBeLessThan(strpos($written, "'tabler.home'"));
+});

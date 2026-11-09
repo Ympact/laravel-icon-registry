@@ -1,8 +1,9 @@
 # Icon Registry
 
-A searchable catalogue of the icons a Laravel application can draw, across Flux, Blade Icons and
-your own providers. Store an icon key, validate it, draw it, and let people find icons by the
-words they actually type.
+Keep icon use consistent across a Laravel application. Icon Registry is a searchable catalogue of
+every icon your application can draw, across Flux, Blade Icons and your own providers, with one
+place to decide which icon means what. Store an icon key, validate it, draw it, and let people find
+icons by the words they actually type.
 
 ```php
 Icons::search('dustbin');                    // tabler.trash, best match first
@@ -13,6 +14,37 @@ $request->validate(['icon' => ['nullable', new IconExists]]);
 ```blade
 <x-registry-icon :icon="$item->icon" class="size-5" />
 ```
+
+## Why use it
+
+Without a shared source, the icon for "delete" gets decided again in every view: a trash can here,
+a cross there, each named the way one icon set happens to name it. The registry gives those
+decisions one home.
+
+```php
+// resources/icons/purposes.php
+return [
+    'action.delete' => ['icon' => 'tabler.trash', 'label' => 'Delete'],
+];
+```
+
+```blade
+<x-registry-icon purpose="action.delete" class="size-5" />
+```
+
+- **One icon per meaning.** Views ask for `action.delete`, not a specific icon, so every delete
+  action looks the same and changing the icon is a one-line edit.
+- **One accessible label per meaning.** A purpose carries its translatable label, so screen reader
+  users hear the same name everywhere you ask for it with `labelled`.
+- **One way to draw, whatever the icon set.** The same tag draws Flux, Blade Icons and custom icons,
+  and the stored key does not change when you switch how an icon is drawn.
+- **Accessible by default.** Icons are decorative unless you name them with `label`, so nobody has
+  to remember `aria-hidden` in each view.
+- **Mistakes are caught early.** `IconExists` rejects an unknown key when it is saved, and
+  `icon-registry:doctor` fails in CI when a purpose or metadata entry refers to an icon that no
+  longer exists.
+- **You can see what is in use.** `icon-registry:scan` lists the icons your Blade and PHP source
+  refers to, which helps spot near-duplicates before they spread.
 
 ## Features
 

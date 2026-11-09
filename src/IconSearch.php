@@ -160,7 +160,7 @@ class IconSearch
     /**
      * @return list<string>
      */
-    protected function tokens(string $value): array
+    public function tokens(string $value): array
     {
         $tokens = preg_split('/[\s._-]+/', $value, flags: PREG_SPLIT_NO_EMPTY) ?: [];
 

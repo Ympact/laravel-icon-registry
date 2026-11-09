@@ -73,6 +73,7 @@ A picker calls `Icons::search($query, vendor: $vendor)` per keystroke and stores
 | `icon-registry:cache` | Write the cache (also run by `php artisan optimize`). |
 | `icon-registry:clear` | Delete the cache (also run by `optimize:clear`). |
 | `icon-registry:doctor` | Report stale metadata/cache; fails on them. `--fix` repairs. |
+| `icon-registry:scan` | List the icons the source uses, with context keywords; `--json` for scripts, `--write` adds them as use cases. |
 | `icon-registry:search` | Search from the terminal; `--json` for scripts. |
 | `icon-registry:export` | Write the JSON manifest editor extensions complete from. |
 

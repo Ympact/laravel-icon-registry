@@ -35,6 +35,10 @@ All notable changes to this package are documented here. The format follows
   The cache is versioned plain data read lazily, and a cache of another format is rebuilt.
 - A VS Code extension in `editors/vscode` that completes icon keys in Blade and PHP from the
   manifest `icon-registry:export` writes.
+- `icon-registry:scan` lists the icons an application's Blade and PHP source refers to, with
+  keywords from their labels, slot text, actions and file paths. Matching is by pattern, and
+  references chosen at runtime are listed but not resolved. `--write` appends the keywords to the
+  metadata file as use cases after a preview.
 
 ### Notes for applications moving from an in-app registry
 

@@ -89,7 +89,11 @@ Keywords come from the reference's `label`, `title`, `aria-label`, `tooltip`, `h
 `placeholder`, `href` and `wire:click`, its slot or the text after it on the same line, a label
 in the same PHP array or fluent chain, and more weakly the file's path. Only the strings inside a
 Blade echo count, so `{{ __('Delete') }}` gives "delete" and `{{ $user->name }}` gives nothing.
-Words in the icon's own key are left out.
+Words in the icon's own key are left out. A component that wraps other icons, such as a navigation
+group, does not take its slot as context, because that text describes the icons inside it.
+
+A Flux icon the application overrides counts for the application's key (`app.home`), since that is
+the file Flux draws; a written-out `flux.home` still counts for `flux.home`.
 
 Matching is by pattern, so treat the result as a good approximation. Two groups are listed apart:
 

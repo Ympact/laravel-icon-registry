@@ -107,7 +107,7 @@ class ScanCommand extends Command
 
     protected function absolute(string $path): string
     {
-        return str_starts_with($path, DIRECTORY_SEPARATOR) ? $path : base_path($path);
+        return str_starts_with($path, DIRECTORY_SEPARATOR) || preg_match('#^[a-zA-Z]:[\\\\/]#', $path) === 1 ? $path : base_path($path);
     }
 
     protected function renderReport(IconUsageReport $report): void

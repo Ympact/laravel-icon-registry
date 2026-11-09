@@ -23,6 +23,8 @@ class ScanIconUsages
 
     protected const MINIMUM_WORD_LENGTH = 3;
 
+    protected const BUNDLED_FLUX_VENDOR = 'flux';
+
     /** How far a closing tag may be for the text before it to still describe the icon. */
     protected const MAXIMUM_SLOT_LENGTH = 500;
 
@@ -34,6 +36,8 @@ class ScanIconUsages
 
     /** Quoted values and `{{ }}` are skipped whole, so a `>` inside them does not end the tag. */
     protected const TAG_PATTERN = '/<((?:flux:|x-)[\w.:\-]*)((?:\{\{.*?\}\}|"[^"]*+"|\'[^\']*+\'|[-=]>|[^\'">])*+)>/s';
+
+    protected const ANY_TAG_PATTERN = '/<\/?[a-zA-Z][\w.:\-]*(?:"[^"]*+"|\'[^\']*+\'|[-=]>|[^\'">])*+>/s';
 
     protected const ATTRIBUTE_PATTERN = '/(?<![\w:.\-])([:@\w.\-]+)\s*=\s*(?:"([^"]*)"|\'([^\']*)\')/s';
 
@@ -48,7 +52,7 @@ class ScanIconUsages
     protected const STORED_KEY_PATTERN = '/([\'"])([\w\-]+\.[\w.\-]+)\1/';
 
     /** A string here names a route, config value, view or translation, even if it equals an icon key. */
-    protected const NAMED_LOOKUP_PATTERN = '/(?:\b(?:route|to_route|config|view|__|trans|trans_choice|lang|include|includeIf|extends|can|cannot)|->(?:name|route|view|can)|::get)\(\s*$/i';
+    protected const NAMED_LOOKUP_PATTERN = '/(?:\b(?:route|to_route|config|view|__|trans|trans_choice|lang|include|includeIf|extends|can|cannot)|->(?:name|route|view|can|get)|::get)\(\s*$/i';
 
     /** Bound values that switch an icon off rather than choose one at runtime. */
     protected const NO_ICON_EXPRESSIONS = ['null', 'false', "''", '""'];
@@ -75,10 +79,13 @@ class ScanIconUsages
     {
         $resolver = $this->resolver();
         $usages = [];
+        $scanned = [];
 
         foreach ($directories as $directory) {
             foreach ($this->files->allFiles($directory) as $file) {
-                if ($file->getExtension() === 'php') {
+                // Directories can overlap, and a file read twice would count its icons twice.
+                if ($file->getExtension() === 'php' && ! isset($scanned[$file->getRealPath()])) {
+                    $scanned[$file->getRealPath()] = true;
                     array_push($usages, ...$this->scanFile($file->getPathname(), $file->getRelativePathname(), $resolver));
                 }
             }
@@ -88,17 +95,28 @@ class ScanIconUsages
     }
 
     /**
-     * Reference and key both resolve to the key; a key wins where the two collide.
+     * Reference and key both resolve to the key; a key wins where the two collide. Built with
+     * plain array writes because merging collections would renumber a numeric icon name.
      *
      * @return array<string, string>
      */
     protected function resolver(): array
     {
         $icons = $this->registry->icons(fresh: true);
+        $resolver = [];
 
-        return $icons->mapWithKeys(fn (Icon $icon) => [$icon->reference => $icon->key])
-            ->merge($icons->mapWithKeys(fn (Icon $icon) => [$icon->key => $icon->key]))
-            ->all();
+        foreach ($icons as $icon) {
+            // "flux.home" stays listed when the application overrides it, but the file drawn is the application's.
+            if (! isset($resolver[$icon->reference]) || $icon->vendor !== self::BUNDLED_FLUX_VENDOR) {
+                $resolver[$icon->reference] = $icon->key;
+            }
+        }
+
+        foreach ($icons as $icon) {
+            $resolver[$icon->key] = $icon->key;
+        }
+
+        return $resolver;
     }
 
     /**
@@ -177,7 +195,10 @@ class ScanIconUsages
             }
 
             $selfClosing = str_ends_with(rtrim($match[2][0]), '/');
-            $words = $this->tagWords($attributes, $this->textBeside($source, $tag, $offset + strlen($whole), $selfClosing));
+            $text = $this->textBeside($source, $tag, $offset + strlen($whole), $selfClosing);
+
+            // What a wrapper holds describes the icons inside it, not the wrapper's own.
+            $words = $this->tagWords($attributes, $this->wrapsIcons($text, $resolver) ? '' : $text);
             $line = $this->lineAt($source, $offset);
 
             foreach ($references as [$reference, $dynamic]) {
@@ -288,6 +309,22 @@ class ScanIconUsages
     }
 
     /**
+     * @param  array<string, string>  $resolver
+     */
+    protected function wrapsIcons(string $text, array $resolver): bool
+    {
+        preg_match_all(self::TAG_PATTERN, $text, $matches, PREG_SET_ORDER);
+
+        foreach ($matches as $match) {
+            if ($this->tagReferences($match[1], $this->attributes($match[2]), $resolver) !== []) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * The tag's slot, or for a self-closing tag the text after it on the same line, which is
      * where `<flux:icon.trash /> Delete` keeps its meaning.
      */
@@ -313,12 +350,12 @@ class ScanIconUsages
     protected function readable(string $value): string
     {
         $echoesResolved = (string) preg_replace_callback(
-            '/\{\{.*?\}\}|\{!!.*?!!\}/s',
+            '/\{\{.*?\}\}|\{!!.*?!!\}|@lang\s*\([^)]*\)/s',
             fn (array $match) => ' '.implode(' ', $this->quotedStrings($match[0])).' ',
             $value,
         );
 
-        return (string) preg_replace(['/<[^>]*>/', '/@\w+(\s*(\((?:[^()]++|(?2))*\)))?/', '/\$\w+(?:(?:\??->|::)\w+)*/', '#https?://[^/\s]+#'], ' ', $echoesResolved);
+        return (string) preg_replace(['/@\w+(\s*(\((?:[^()]++|(?2))*\)))?/', self::ANY_TAG_PATTERN, '/\$\w+(?:(?:\??->|::)\w+)*/', '#https?://[^/\s]+#'], ' ', $echoesResolved);
     }
 
     /**

@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Tests\Support\IconWorkspace;
 use Ympact\IconRegistry\Actions\ScanIconUsages;
+use Ympact\IconRegistry\Console\ScanCommand;
 use Ympact\IconRegistry\IconRegistry;
 use Ympact\IconRegistry\IconUsage;
 use Ympact\IconRegistry\IconUsageReport;
@@ -431,4 +432,82 @@ it('recognises the Blade tag the application configured', function (): void {
     $report = ($this->scan)('page.blade.php', '<x-my-icon icon="missing" /><x-registry-icon icon="also-missing" />');
 
     expect(array_map(fn (IconUsage $usage) => $usage->reference, $report->unknown()))->toBe(['missing']);
+});
+
+it('does not give a component that wraps other icons the text of its children', function (): void {
+    $report = ($this->scan)('page.blade.php', <<<'BLADE'
+        <flux:navlist.group icon="star" heading="Settings">
+            <flux:navlist.item icon="tabler.home">Dashboard</flux:navlist.item>
+        </flux:navlist.group>
+        BLADE);
+
+    expect($report->icons()['app.star']['usages'][0]->contextKeywords)->toBe(['settings'])
+        ->and($report->icons()['tabler.home']['usages'][0]->contextKeywords)->toBe(['dashboard']);
+});
+
+it('reads the text of a nested tag that draws no icon, without the code in its attributes', function (): void {
+    $report = ($this->scan)('page.blade.php', '<flux:button icon="star"><flux:badge :color="$status->color" :map="[\'a\' => $tint]">Save</flux:badge></flux:button>');
+
+    expect($report->icons()['app.star']['usages'][0]->contextKeywords)->toBe(['save']);
+});
+
+it('keeps the slot text after a comparison in a directive', function (): void {
+    $report = ($this->scan)('page.blade.php', '<flux:button icon="star">@if ($count < 1) Save <b>now</b> @endif</flux:button>');
+
+    expect($report->icons()['app.star']['usages'][0]->contextKeywords)->toEqualCanonicalizing(['save', 'now']);
+});
+
+it('reads the text of an @lang directive like a translated echo', function (): void {
+    $report = ($this->scan)('page.blade.php', "<flux:button icon=\"star\">@lang('Delete')</flux:button>");
+
+    expect($report->icons()['app.star']['usages'][0]->contextKeywords)->toBe(['delete']);
+});
+
+it('does not take an instance lookup for a stored key', function (): void {
+    $report = ($this->scan)('Nav.php', "<?php\nconfig()->get('tabler.home');\n");
+
+    expect($report->icons())->toBe([]);
+});
+
+it('resolves an icon with a numeric name', function (): void {
+    $this->workspace->flux(['' => ['404']]);
+
+    $report = ($this->scan)('page.blade.php', '<flux:icon.404 />');
+
+    expect(array_keys($report->icons()))->toBe(['app.404'])
+        ->and($report->unknown())->toBe([]);
+});
+
+it('credits an overridden Flux icon to the application, unless the key is written out', function (): void {
+    config()->set('icon-registry.providers.flux.flux_icons', true);
+    $this->workspace->flux(['' => ['home']]);
+
+    $report = ($this->scan)('page.blade.php', "<flux:icon.home />\n<x-registry-icon icon=\"flux.home\" />");
+
+    expect(array_keys($report->icons()))->toBe(['app.home', 'flux.home'])
+        ->and($report->icons()['app.home']['usages'][0]->line)->toBe(1);
+});
+
+it('counts a file once when scanned directories overlap', function (): void {
+    ($this->scan)('admin/page.blade.php', '<flux:icon.star />');
+
+    $report = app(ScanIconUsages::class)->handle([$this->source, $this->source.'/admin']);
+
+    expect($report->icons()['app.star']['usages'])->toHaveCount(1);
+});
+
+it('treats a Windows drive path as absolute and resolves a relative one from the application root', function (): void {
+    // Read directly: the console's error output strips the base path, so it cannot show the difference.
+    $command = new class extends ScanCommand
+    {
+        public function resolve(string $path): string
+        {
+            return $this->absolute($path);
+        }
+    };
+
+    expect($command->resolve('C:\\modules'))->toBe('C:\\modules')
+        ->and($command->resolve('D:/modules'))->toBe('D:/modules')
+        ->and($command->resolve('/srv/modules'))->toBe('/srv/modules')
+        ->and($command->resolve('modules'))->toBe(base_path('modules'));
 });

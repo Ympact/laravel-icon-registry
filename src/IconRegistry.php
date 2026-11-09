@@ -168,10 +168,7 @@ class IconRegistry
         $icons = $this->build();
 
         $this->files->ensureDirectoryExists(dirname($this->cachePath()));
-        $this->files->put(
-            $this->cachePath(),
-            "<?php\n\nreturn ".var_export($icons->all(), true).";\n"
-        );
+        $this->files->replace($this->cachePath(), "<?php\n\nreturn ".var_export($icons->all(), true).";\n");
 
         // Opcache would otherwise serve the previous cache to the next `require` in this process.
         if (function_exists('opcache_invalidate')) {

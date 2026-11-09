@@ -98,7 +98,7 @@ class MetadataFile
         }
 
         $this->files->ensureDirectoryExists(dirname($this->path));
-        $this->files->put($this->path, rtrim($header)."\n\nreturn [\n\n".$body."];\n");
+        $this->files->replace($this->path, rtrim($header)."\n\nreturn [\n\n".$body."];\n");
 
         // Opcache would otherwise serve the previous file to a `require` within its revalidate window.
         if (function_exists('opcache_invalidate')) {

@@ -137,7 +137,7 @@ Only after v1.0.0 is tagged:
 ## Release process
 
 - Run CI on `main` and make sure all checks pass.
-- The version lives in **two** places and both must move together: the `version` field in `composer.json` and the git tag. Packagist reads the tag, so a stale field is invisible until someone reads the file and believes it. Decide the number according to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+- The version is the git tag; `composer.json` has no `version` field. Decide the number according to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - make sure CHANGELOG is up to date. CHANGELOG does not need to be exhaustive nor include a list of future improvements/roadmap items.
 - Make sure the [roadmap](./docs/roadmap.md) is current: remove what was released, add what came up.
 - Update `llms.txt`, the agent reference for applications that use this package.

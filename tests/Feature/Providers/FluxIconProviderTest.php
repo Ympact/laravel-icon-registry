@@ -43,24 +43,25 @@ it('does not list an override of the dynamic icon component as an icon', functio
     expect(app(IconRegistry::class)->find('app.index'))->toBeNull();
 });
 
-it('lists the icons that ship with Flux, unless an application file overrides one', function (): void {
+it('lists the icons that ship with Flux', function (): void {
     config()->set('icon-registry.providers.flux.flux_icons', true);
 
-    $icons = app(IconRegistry::class)->all();
+    expect(app(IconRegistry::class)->find('flux.home')?->reference)->toBe('home');
+});
 
-    expect($icons->firstWhere('key', 'flux.home')?->reference)->toBe('home')
-        ->and($icons->pluck('reference')->filter(fn (string $reference) => $reference === 'home')->count())->toBe(1);
-
-    // An application file named "home" is what <flux:icon icon="home"> draws, so Flux's own is not listed.
+it('keeps a stored Flux key valid when an application file overrides that icon', function (): void {
+    config()->set('icon-registry.providers.flux.flux_icons', true);
     File::put("{$this->workspace->fluxPath}/home.blade.php", '<svg/>');
 
-    $fresh = app(IconRegistry::class)->icons(fresh: true);
+    $registry = app(IconRegistry::class);
 
-    expect($fresh->pluck('key'))->toContain('app.home')->not->toContain('flux.home');
+    expect($registry->find('app.home')?->reference)->toBe('home')
+        ->and($registry->find('flux.home')?->reference)->toBe('home')
+        ->and($registry->find('flux.home')?->path)->toBe("{$this->workspace->fluxPath}/home.blade.php");
 });
 
 it('draws an icon through <flux:icon>, passing the attributes on', function (): void {
-    $html = Blade::render('<x-icon-registry::icon icon="tabler.trash" class="size-5" />');
+    $html = Blade::render('<x-registry-icon icon="tabler.trash" class="size-5" />');
 
     expect($html)->toContain('data-icon="trash"')->toContain('class="size-5"');
 });

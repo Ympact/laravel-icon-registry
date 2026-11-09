@@ -26,6 +26,8 @@ holds the icon set in memory for that request. Resolve it from the container, or
 | `clearCache(): bool` | Deletes the cache; false when there was none. |
 | `validate(): array` | The report `icon-registry:doctor` prints: `icon_count`, `metadata_count`, `cache_exists`, `cache_is_fresh`, `orphaned_metadata`, `icons_without_metadata`, `stale_cache_entries`, `uncached_icons`, `shadowed_icons`. |
 | `cleanMetadata(bool $write = false): array` | Drops metadata for missing icons and normalises the rest; writes the file when `$write` is true. Returns `removed`, `removed_count`, `metadata` and `written`. |
+| `editorManifestPath(): string` | The configured `editor_manifest` path. |
+| `writeEditorManifest(?string $path = null): int` | Writes the manifest for editor extensions from a fresh scan and returns the number of icons. |
 | `metadata(): MetadataFile` | The metadata file. |
 | `cachePath(): string` | The configured cache path. |
 
@@ -42,4 +44,4 @@ A readonly value object.
 | `reference` | What the provider's component expects. |
 | `path` | The file behind the icon, or null. |
 | `aliases`, `useCases` | From the metadata. |
-| `terms` | The search index. Internal: it is left out of `jsonSerialize()`. |
+| `terms`, `searchText` | The search index. Internal: left out of `jsonSerialize()`. |

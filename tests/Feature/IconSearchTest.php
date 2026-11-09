@@ -15,31 +15,31 @@ beforeEach(function (): void {
         ])
         ->metadata([
             'tabler.trash' => [
-                'label' => 'Verwijderen',
-                'aliases' => ['delete', 'prullenbak'],
+                'label' => 'Remove',
+                'aliases' => ['delete', 'dustbin'],
                 'use_cases' => ['action.delete'],
             ],
             'heroicons.trash' => [
-                'label' => 'Verwijderen',
+                'label' => 'Remove',
                 'aliases' => ['delete'],
             ],
             // Only mentions the word inside a longer phrase, so it must rank below a label.
             'tabler.layers-subtract' => [
-                'label' => 'Aftrekken',
-                'aliases' => ['verwijderen uit', 'subtract'],
+                'label' => 'Minus',
+                'aliases' => ['remove from', 'subtract'],
             ],
             'tabler.file-x' => [
-                'label' => 'Bestand verwijderen',
-                'aliases' => ['remove file'],
+                'label' => 'Remove document',
+                'aliases' => ['discard file'],
             ],
             'tabler.home' => [
-                'label' => 'Woonfunctie',
-                'aliases' => ['huis', 'woning'],
-                'use_cases' => ['geodata.gebruiksdoel.woonfunctie'],
+                'label' => 'Residence',
+                'aliases' => ['house', 'dwelling'],
+                'use_cases' => ['geodata.purpose.residence'],
             ],
             'tabler.device-floppy' => [
-                'label' => 'Opslaan',
-                'aliases' => ['save', 'bewaren'],
+                'label' => 'Save',
+                'aliases' => ['store', 'keep'],
             ],
         ]);
 
@@ -52,7 +52,7 @@ beforeEach(function (): void {
 afterEach(fn () => $this->workspace->delete());
 
 it('ranks a label match above a mention inside an alias phrase', function (): void {
-    $keys = ($this->keys)('verwijderen');
+    $keys = ($this->keys)('remove');
 
     expect(array_slice($keys, 0, 2))->toEqualCanonicalizing(['heroicons.trash', 'tabler.trash'])
         ->and($keys)->toContain('tabler.layers-subtract')
@@ -60,15 +60,15 @@ it('ranks a label match above a mention inside an alias phrase', function (): vo
 });
 
 it('requires every token to match, in any order', function (): void {
-    expect(($this->keys)('bestand verwijderen'))->toBe(['tabler.file-x'])
-        ->and(($this->keys)('verwijderen bestand'))->toBe(['tabler.file-x'])
-        ->and(($this->keys)('opslaan verwijderen'))->toBe([]);
+    expect(($this->keys)('remove document'))->toBe(['tabler.file-x'])
+        ->and(($this->keys)('document remove'))->toBe(['tabler.file-x'])
+        ->and(($this->keys)('save remove'))->toBe([]);
 });
 
 it('searches aliases and use cases, not just the label', function (): void {
-    expect(($this->keys)('prullenbak'))->toBe(['tabler.trash'])
-        ->and(($this->keys)('woonfunctie'))->toContain('tabler.home')
-        ->and(($this->keys)('gebruiksdoel'))->toBe(['tabler.home']);
+    expect(($this->keys)('dustbin'))->toBe(['tabler.trash'])
+        ->and(($this->keys)('residence'))->toContain('tabler.home')
+        ->and(($this->keys)('purpose'))->toBe(['tabler.home']);
 });
 
 it('lets the icon name and vendor scope a search', function (): void {
@@ -77,13 +77,13 @@ it('lets the icon name and vendor scope a search', function (): void {
 });
 
 it('tolerates a typo', function (): void {
-    expect(($this->keys)('verwijdren'))->toContain('tabler.trash')
-        ->and(($this->keys)('prullenbk'))->toBe(['tabler.trash']);
+    expect(($this->keys)('remve'))->toContain('tabler.trash')
+        ->and(($this->keys)('dustbn'))->toBe(['tabler.trash']);
 });
 
 it('counts a swapped pair of letters as a single mistake', function (): void {
     expect(($this->keys)('tabler.trahs'))->toBe(['tabler.trash'])
-        ->and(($this->keys)('prullenbka'))->toBe(['tabler.trash']);
+        ->and(($this->keys)('dustbni'))->toBe(['tabler.trash']);
 });
 
 it('only falls back to typo matching when nothing matched outright', function (): void {
@@ -101,4 +101,8 @@ it('returns everything in label order when the query is empty', function (): voi
 
 it('limits the number of results', function (): void {
     expect(app(IconRegistry::class)->search('', limit: 3))->toHaveCount(3);
+});
+
+it('treats a negative limit as no results rather than slicing from the end', function (): void {
+    expect(app(IconRegistry::class)->search('', limit: -1))->toBeEmpty();
 });

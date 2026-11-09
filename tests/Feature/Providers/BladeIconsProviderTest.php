@@ -36,7 +36,7 @@ it('lists only the configured sets when sets are given', function (): void {
 });
 
 it('draws an icon with svg(), passing the class and attributes on', function (): void {
-    $html = Blade::render('<x-icon-registry::icon icon="heroicons.s-trash" class="size-5" aria-hidden="true" />');
+    $html = Blade::render('<x-registry-icon icon="heroicons.s-trash" class="size-5" aria-hidden="true" />');
 
     expect($html)->toContain('data-icon="s-trash"')->toContain('class="size-5"')->toContain('aria-hidden="true"');
 });

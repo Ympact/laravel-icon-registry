@@ -92,6 +92,7 @@ class IconSearch
      */
     public function search(array $icons, ?string $query, int $limit): array
     {
+        $limit = max(0, $limit);
         $tokens = $this->tokens(Str::lower(trim((string) $query)));
 
         if ($tokens === []) {
@@ -126,6 +127,10 @@ class IconSearch
         $hits = [];
 
         foreach ($icons as $icon) {
+            if (! $fuzzy && ! $this->mentionsEveryToken($icon->searchText, $tokens)) {
+                continue;
+            }
+
             $score = $this->score($icon, $tokens, $fuzzy);
 
             if ($score !== null) {
@@ -134,6 +139,22 @@ class IconSearch
         }
 
         return $hits;
+    }
+
+    /**
+     * Most icons fail this, and one string comparison is far cheaper than scoring every term.
+     *
+     * @param  list<string>  $tokens
+     */
+    protected function mentionsEveryToken(string $searchText, array $tokens): bool
+    {
+        foreach ($tokens as $token) {
+            if (! str_contains($searchText, $token)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

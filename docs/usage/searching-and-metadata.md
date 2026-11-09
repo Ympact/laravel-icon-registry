@@ -5,15 +5,15 @@
 ```php
 use Ympact\IconRegistry\Facades\Icons;
 
-Icons::search('prullenbak');                     // best match first
+Icons::search('dustbin');                        // best match first
 Icons::search('trash', vendor: 'tabler');
 Icons::search('home', provider: 'blade-icons', limit: 20);
 Icons::search();                                 // everything, in label order
 ```
 
 `search()` returns a collection of `Ympact\IconRegistry\Icon`. Every word of the query must match
-the icon somewhere: "bestand verwijderen" finds an icon labelled "Bestand verwijderen" and not one
-that only matches "verwijderen". Results are ordered by how well they matched:
+the icon somewhere: "remove document" finds an icon labelled "Remove document" and not one
+that only matches "remove". Results are ordered by how well they matched:
 
 - an exact word beats a prefix, and a prefix beats a match inside a word;
 - a match on the label or the icon's own name beats one on an alias, which beats one on a use case;
@@ -38,8 +38,8 @@ return [
     // ----------------------------------------------------------
 
     'tabler.trash' => [
-        'label' => 'Verwijderen',
-        'aliases' => ['delete', 'prullenbak'],
+        'label' => 'Remove',
+        'aliases' => ['delete', 'dustbin'],
         'use_cases' => ['action.delete'],
     ],
 
@@ -53,6 +53,9 @@ return [
 | `use_cases` | Where the application uses it, such as `action.delete`. Searchable, at a lower weight. |
 
 Other fields are kept as they are but not searched.
+
+When a cache exists, edits to this file take effect after `php artisan icon-registry:cache`.
+`icon-registry:doctor` reports a cache that no longer matches as stale.
 
 ## Keeping it tidy
 

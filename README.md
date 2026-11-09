@@ -5,13 +5,13 @@ your own providers. Store an icon key, validate it, draw it, and let people find
 words they actually type.
 
 ```php
-Icons::search('prullenbak');                 // tabler.trash, best match first
+Icons::search('dustbin');                    // tabler.trash, best match first
 
 $request->validate(['icon' => ['nullable', new IconExists]]);
 ```
 
 ```blade
-<x-icon-registry::icon :icon="$item->icon" class="size-5" aria-hidden="true" />
+<x-registry-icon :icon="$item->icon" class="size-5" aria-hidden="true" />
 ```
 
 ## Features
@@ -22,7 +22,8 @@ $request->validate(['icon' => ['nullable', new IconExists]]);
 - **Scored search** over names, labels, aliases and use cases, with typo tolerance.
 - **A metadata file** for labels and aliases, which the doctor command prunes without losing your comments.
 - **An `IconExists` rule** that suggests the closest icon.
-- **A cache** that `php artisan optimize` builds.
+- **A cache** that `php artisan optimize` builds. With opcache, drawing a few icons does not load the whole set.
+- **A VS Code extension** that completes icon keys as you type. See [Editor support](docs/usage/editor-support.md).
 
 ## Requirements
 

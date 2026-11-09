@@ -19,6 +19,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
      * @param  list<string>  $aliases
      * @param  list<string>  $useCases
      * @param  array<string, int>  $terms  Lower-cased search terms, each weighted by where it came from.
+     * @param  string  $searchText  The terms joined, so search can discard a non-match in one comparison.
      */
     public function __construct(
         public string $key,
@@ -31,10 +32,34 @@ final readonly class Icon implements Arrayable, JsonSerializable
         public array $aliases = [],
         public array $useCases = [],
         public array $terms = [],
+        public string $searchText = '',
     ) {}
 
     /**
-     * Rebuilds an icon from var_export() output, which is how the cache file stores it.
+     * Rebuilds an icon from its toArray() form, which is how the cache file stores it.
+     *
+     * @param  array<string, mixed>  $record
+     */
+    public static function fromArray(array $record): self
+    {
+        return new self(
+            key: $record['key'],
+            vendor: $record['vendor'],
+            name: $record['name'],
+            label: $record['label'],
+            provider: $record['provider'],
+            reference: $record['reference'],
+            path: $record['path'],
+            aliases: $record['aliases'],
+            useCases: $record['use_cases'],
+            terms: $record['terms'],
+            searchText: $record['search_text'],
+        );
+    }
+
+    /**
+     * Only so a cache of var_exported icons, as earlier builds wrote, can load and be rejected
+     * by its missing version. Without it, requiring that file is a fatal error.
      *
      * @param  array<string, mixed>  $properties
      */
@@ -44,7 +69,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
     }
 
     /**
-     * @return array{key: string, vendor: string, name: string, label: string, provider: string, reference: string, path: string|null, aliases: list<string>, use_cases: list<string>, terms: array<string, int>}
+     * @return array{key: string, vendor: string, name: string, label: string, provider: string, reference: string, path: string|null, aliases: list<string>, use_cases: list<string>, terms: array<string, int>, search_text: string}
      */
     public function toArray(): array
     {
@@ -59,6 +84,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
             'aliases' => $this->aliases,
             'use_cases' => $this->useCases,
             'terms' => $this->terms,
+            'search_text' => $this->searchText,
         ];
     }
 
@@ -70,7 +96,7 @@ final readonly class Icon implements Arrayable, JsonSerializable
     public function jsonSerialize(): array
     {
         $data = $this->toArray();
-        unset($data['terms']);
+        unset($data['terms'], $data['search_text']);
 
         return $data;
     }

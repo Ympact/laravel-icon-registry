@@ -68,8 +68,8 @@ class FluxIconProvider implements IconProvider
     }
 
     /**
-     * Flux's own icons, less those an application file of the same name overrides: Flux draws
-     * the application's file for that name, so listing both would offer the same icon twice.
+     * Flux's own icons. One an application file overrides stays listed, so a stored "flux.home"
+     * keeps drawing, and points at that file because it is what Flux draws for the name.
      *
      * @param  list<DiscoveredIcon>  $loose
      * @return list<DiscoveredIcon>
@@ -82,11 +82,9 @@ class FluxIconProvider implements IconProvider
             return [];
         }
 
-        $overridden = array_flip(array_map(fn (DiscoveredIcon $icon) => $icon->name, $loose));
+        $overrides = array_column($loose, 'path', 'name');
 
-        $icons = $this->iconsIn($path, fn (string $name) => new DiscoveredIcon('flux', $name, $name, $this->file($path, $name)));
-
-        return array_values(array_filter($icons, fn (DiscoveredIcon $icon) => ! isset($overridden[$icon->name])));
+        return $this->iconsIn($path, fn (string $name) => new DiscoveredIcon('flux', $name, $name, $overrides[$name] ?? $this->file($path, $name)));
     }
 
     protected function bundledPath(): ?string

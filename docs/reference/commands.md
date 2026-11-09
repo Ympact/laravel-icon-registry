@@ -14,7 +14,7 @@ Deletes the cache. `php artisan optimize:clear` runs it.
 ## `icon-registry:doctor`
 
 Reports the available providers, the number of icons and metadata entries, whether the cache is
-fresh, metadata for icons that no longer exist, cache entries for icons that no longer exist, and
+fresh (every icon in it, including labels and aliases, matches a new scan), metadata for icons that no longer exist, cache entries for icons that no longer exist, and
 keys that more than one provider lists. It exits with a failure on stale metadata or stale cache
 entries, so it can run in CI.
 
@@ -25,13 +25,22 @@ entries, so it can run in CI.
 | `--clear-cache` | Deletes the cache. |
 | `--rebuild-cache` | Rebuilds the cache. |
 
+## `icon-registry:export`
+
+Writes the JSON manifest that editor extensions complete from, always from a fresh scan. See
+[Editor support](../usage/editor-support.md).
+
+| Option | Effect |
+| --- | --- |
+| `--path=` | Write here instead of the `editor_manifest` path. |
+
 ## `icon-registry:search`
 
 Searches the registry. Without a query it opens an interactive search; with one it prints a table.
 
 ```bash
 php artisan icon-registry:search
-php artisan icon-registry:search "bestand verwijderen" --vendor=tabler
+php artisan icon-registry:search "remove document" --vendor=tabler
 php artisan icon-registry:search home --json
 ```
 

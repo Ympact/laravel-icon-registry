@@ -51,6 +51,7 @@ return [
 | `label` | The name shown for the icon; it defaults to the icon name as a headline ("Device Floppy"). |
 | `aliases` | Other words for the icon. |
 | `use_cases` | Loose search keywords for where the application uses it, many per icon; `icon-registry:scan --write` adds to them. Searchable, at a lower weight. To fix one icon and label per meaning, use a [purpose](storing-and-drawing-icons.md#draw-by-purpose). |
+| `locked` | When `true`, `icon-registry:scan --write` never adds to this entry. Not searched. |
 
 Other fields are kept as they are but not searched.
 
@@ -115,7 +116,15 @@ the file. `--force` skips the question. It only appends to `use_cases`, and:
   words from the file path;
 - leaves out a word the entry's label, aliases or use cases already contain, so a second run adds
   nothing new unless the source changed;
+- skips an icon listed in `generic_icons` and an entry with `'locked' => true`;
 - creates an entry for an icon that has none, and rebuilds the cache if one exists.
+
+The words near a chevron or a close button describe the screen, not the icon, so `generic_icons`
+keeps them out. Those icons still appear in the report. A pattern is matched against the icon's
+name, with or without a one-letter style prefix, so `x-mark` also covers `heroicons.o-x-mark`. A
+pattern containing a dot is matched against the whole key instead, as in `tabler.arrow-*`. `*` is a
+wildcard. The match is exact otherwise, so a set's own naming, such as `fas-xmark`, needs its own
+pattern.
 
 Existing entries keep their order and comments. A new entry goes after the last one of its vendor;
 a vendor new to the file goes at the top, above any section banner. The keywords are single words taken from your

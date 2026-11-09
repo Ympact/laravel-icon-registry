@@ -12,6 +12,9 @@ it('documents every configuration key', function (): void {
 
     expect($keys)->not->toBeEmpty();
 
+    // The items of a list are values, not options: the list's own key is what needs documenting.
+    $keys = array_unique(array_map(fn (string $key) => (string) preg_replace('/\.\d+$/', '', $key), $keys));
+
     foreach ($keys as $key) {
         // A provider's driver is documented once, for every provider.
         $documented = str_contains($page, "`{$key}`")

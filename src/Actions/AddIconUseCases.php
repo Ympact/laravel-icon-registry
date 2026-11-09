@@ -2,6 +2,7 @@
 
 namespace Ympact\IconRegistry\Actions;
 
+use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Ympact\IconRegistry\IconRegistry;
@@ -11,16 +12,21 @@ use Ympact\IconRegistry\IconUsageReport;
 
 /**
  * Adds the context keywords of a usage scan to the metadata file as use cases. It only ever
- * appends: labels, aliases, existing use cases and custom fields stay as they are.
+ * appends, and leaves out generic icons and locked entries: labels, aliases, existing use cases
+ * and custom fields stay as they are.
  */
 class AddIconUseCases
 {
     /** Few enough that a curated entry is not swamped by words from one scan. */
     protected const MAXIMUM_PER_ICON = 5;
 
+    /** One set's style marker, as in heroicons' "o-home", so one pattern covers every style. */
+    protected const STYLE_PREFIX = '/^[a-z]-/';
+
     public function __construct(
         protected IconRegistry $registry,
         protected IconSearch $search,
+        protected Repository $config,
     ) {}
 
     /**
@@ -35,6 +41,10 @@ class AddIconUseCases
         $additions = [];
 
         foreach ($report->icons() as $key => $icon) {
+            if ($this->isGeneric($key) || $this->isLocked($metadata[$key] ?? [])) {
+                continue;
+            }
+
             $contextual = array_merge(...array_map(fn (IconUsage $usage) => $usage->contextKeywords, $icon['usages']));
             $strongest = array_slice(array_values(array_intersect($icon['keywords'], $contextual)), 0, self::MAXIMUM_PER_ICON);
             $new = array_values(array_diff($strongest, $this->wordsIn($metadata[$key] ?? [])));
@@ -50,8 +60,9 @@ class AddIconUseCases
     }
 
     /**
-     * Rereads the file, so an edit made while the preview was on screen is kept. Existing entries
-     * keep their order, so a hand-kept section stays under its banner.
+     * Rereads the file, so an edit made while the preview was on screen is kept, including an
+     * entry locked in that time. Existing entries keep their order, so a hand-kept section stays
+     * under its banner.
      *
      * @param  array<string, list<string>>  $additions
      */
@@ -62,6 +73,11 @@ class AddIconUseCases
 
         foreach ($additions as $key => $useCases) {
             $entry = $metadata[$key] ?? [];
+
+            if ($this->isLocked($entry)) {
+                continue;
+            }
+
             $entry['use_cases'] = [...array_values($entry['use_cases'] ?? []), ...$useCases];
 
             $isNew = ! isset($metadata[$key]);
@@ -75,6 +91,30 @@ class AddIconUseCases
         }
 
         $file->write($metadata);
+    }
+
+    /**
+     * A pattern with a dot is matched against the whole key, any other against the icon's name,
+     * with or without its style prefix.
+     */
+    protected function isGeneric(string $key): bool
+    {
+        $name = Str::after($key, '.');
+        $unstyled = (string) preg_replace(self::STYLE_PREFIX, '', $name);
+
+        return collect((array) $this->config->get('icon-registry.generic_icons', []))->contains(
+            fn (string $pattern) => str_contains($pattern, '.')
+                ? Str::is($pattern, $key)
+                : Str::is($pattern, $name) || Str::is($pattern, $unstyled)
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $entry
+     */
+    protected function isLocked(array $entry): bool
+    {
+        return (bool) ($entry['locked'] ?? false);
     }
 
     /**

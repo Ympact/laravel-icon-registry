@@ -4,6 +4,7 @@ use BladeUI\Icons\Factory;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Tests\Support\IconWorkspace;
+use Ympact\IconRegistry\Actions\AddIconUseCases;
 use Ympact\IconRegistry\Actions\ScanIconUsages;
 use Ympact\IconRegistry\Console\ScanCommand;
 use Ympact\IconRegistry\IconRegistry;
@@ -265,6 +266,74 @@ describe('--write', function (): void {
         artisan('icon-registry:scan', ['--path' => [$this->source], '--write' => true, '--force' => true])->assertSuccessful();
 
         expect(app(IconRegistry::class)->search('favourite')->pluck('key')->all())->toBe(['app.star']);
+    });
+
+    it('suggests nothing for a generic icon, and still reports it', function (): void {
+        ($this->scan)('page.blade.php', '<flux:button icon="chevron-up">Label</flux:button>');
+
+        artisan('icon-registry:scan', ['--path' => [$this->source], '--write' => true, '--force' => true])
+            ->expectsOutputToContain('app.chevron-up')
+            ->expectsOutputToContain('No new use cases to add.')
+            ->assertSuccessful();
+
+        expect($this->workspace->metadataPath)->not->toBeFile();
+    });
+
+    it('matches generic icons by name, without a style prefix, or by whole key', function (array $patterns, array $expected): void {
+        config()->set('icon-registry.generic_icons', $patterns);
+        ($this->scan)('page.blade.php', <<<'BLADE'
+            <flux:button icon="tabler.home">Label</flux:button>
+            <x-heroicon-o-bell /> Label
+            BLADE);
+
+        expect(array_keys(app(AddIconUseCases::class)->additionsFrom(app(ScanIconUsages::class)->handle([$this->source]))))->toBe($expected);
+    })->with([
+        'no patterns' => [[], ['heroicons.o-bell', 'tabler.home']],
+        'name' => [['home'], ['heroicons.o-bell']],
+        'wildcard on a name' => [['ho*'], ['heroicons.o-bell']],
+        'name without its style prefix' => [['bell'], ['tabler.home']],
+        'name with its style prefix' => [['o-bell'], ['tabler.home']],
+        'whole key' => [['tabler.home'], ['heroicons.o-bell']],
+        'whole key of another vendor' => [['lucide.home'], ['heroicons.o-bell', 'tabler.home']],
+        'part of a name' => [['hom'], ['heroicons.o-bell', 'tabler.home']],
+    ]);
+
+    it('leaves a locked entry unchanged, and still adds to the entry beside it', function (): void {
+        File::ensureDirectoryExists(dirname($this->workspace->metadataPath));
+        File::put($this->workspace->metadataPath, <<<'PHP'
+            <?php
+
+            return [
+
+                'app.star' => [
+                    'use_cases' => ['action.highlight'],
+                    'locked' => true,
+                ],
+
+                'tabler.home' => [
+                    'use_cases' => ['navigation.start'],
+                ],
+
+            ];
+            PHP);
+
+        ($this->scan)('page.blade.php', '<flux:button icon="star">Favourite</flux:button><flux:button icon="tabler.home">Dashboard</flux:button>');
+
+        artisan('icon-registry:scan', ['--path' => [$this->source], '--write' => true, '--force' => true])->assertSuccessful();
+
+        expect(require $this->workspace->metadataPath)->toBe([
+            'app.star' => ['use_cases' => ['action.highlight'], 'locked' => true],
+            'tabler.home' => ['use_cases' => ['navigation.start', 'dashboard']],
+        ]);
+    });
+
+    it('does not write to an entry locked while the preview was on screen', function (): void {
+        File::ensureDirectoryExists(dirname($this->workspace->metadataPath));
+        File::put($this->workspace->metadataPath, "<?php\n\nreturn [\n\n    'app.star' => [\n        'locked' => true,\n    ],\n\n];\n");
+
+        app(AddIconUseCases::class)->handle(['app.star' => ['favourite']]);
+
+        expect(require $this->workspace->metadataPath)->toBe(['app.star' => ['locked' => true]]);
     });
 
     it('refuses to combine with --json', function (): void {

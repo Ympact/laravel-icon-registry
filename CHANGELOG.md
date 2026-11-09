@@ -6,6 +6,18 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- The `generic_icons` config key: icons such as chevrons and close buttons that `icon-registry:scan --write`
+  adds no use cases to, because the words near them describe the screen. They are still reported.
+- A `locked` flag on a metadata entry, which `icon-registry:scan --write` never adds to.
+
+### Changed
+
+- With the default `generic_icons`, `icon-registry:scan --write` no longer suggests use cases for
+  chevrons, directional arrows, `x`, `x-mark`, `close`, `plus` and `minus`. Use cases already in the
+  file are not removed.
+
 ## [1.0.0] - 2026-11-09
 
 ### Added

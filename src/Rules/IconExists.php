@@ -13,9 +13,13 @@ use Ympact\IconRegistry\IconRegistry;
  */
 class IconExists implements ValidationRule
 {
+    /**
+     * @param  bool  $drawableByKey  Accept only icons whose key their provider's component draws as is.
+     */
     public function __construct(
         protected ?string $vendor = null,
         protected ?string $provider = null,
+        protected bool $drawableByKey = false,
     ) {}
 
     /**
@@ -32,6 +36,15 @@ class IconExists implements ValidationRule
     public static function provider(string $provider): self
     {
         return new self(provider: $provider);
+    }
+
+    /**
+     * Restricts the rule to icons drawable by their key, for a key handed straight to a provider's
+     * component such as `<flux:icon :icon="$key">`. Flux's own icons ("flux.home") are not.
+     */
+    public static function drawableByKey(): self
+    {
+        return new self(drawableByKey: true);
     }
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
@@ -51,11 +64,18 @@ class IconExists implements ValidationRule
 
         // The value is checked as given, not trimmed: it is stored as given, and must draw later.
         // A cache written before the icon was built would reject a good key, so confirm on disk before failing.
-        if ($this->matches($registry->find($value)) || $this->matches($registry->find($value, fresh: true))) {
+        if ($this->matches($registry->find($value))) {
             return;
         }
 
-        $suggestion = $registry->search($value, vendor: $this->vendor, limit: 1, provider: $this->provider)->first();
+        $listed = $registry->find($value, fresh: true);
+
+        if ($this->matches($listed)) {
+            return;
+        }
+
+        // A listed icon the constraints exclude is best replaced by one of the same name they allow.
+        $suggestion = $registry->search($listed->name ?? $value, vendor: $this->vendor, limit: 1, provider: $this->provider, drawableByKey: $this->drawableByKey)->first();
 
         $fail($suggestion === null
             ? 'icon-registry::validation.missing'
@@ -67,6 +87,7 @@ class IconExists implements ValidationRule
     {
         return $icon !== null
             && ($this->vendor === null || $icon->vendor === $this->vendor)
-            && ($this->provider === null || $icon->provider === $this->provider);
+            && ($this->provider === null || $icon->provider === $this->provider)
+            && (! $this->drawableByKey || $icon->isDrawableByKey());
     }
 }

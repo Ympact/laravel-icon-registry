@@ -65,6 +65,7 @@ Validate on save, draw with the component:
 use Ympact\IconRegistry\Rules\IconExists;
 
 $rules = ['icon' => ['nullable', 'string', new IconExists]];      // or IconExists::vendor('tabler')
+$rules = ['icon' => ['nullable', 'string', IconExists::drawableByKey()]]; // key goes straight into a Flux icon= attribute
 ```
 
 A picker calls `Icons::search($query, vendor: $vendor)` per keystroke and stores `$icon->key`.

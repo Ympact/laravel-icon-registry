@@ -127,7 +127,7 @@ class IconRegistry
 
     /**
      * Icons matching every token of the query, best first; an empty query lists in label order.
-     * Hidden icons are left out.
+     * Hidden icons are left out, and with `$drawableByKey` so are those not drawable by their key.
      *
      * @return Collection<int, Icon>
      */
@@ -137,10 +137,12 @@ class IconRegistry
         int $limit = 50,
         bool $fresh = false,
         ?string $provider = null,
+        bool $drawableByKey = false,
     ): Collection {
         $icons = array_filter($this->icons($fresh)->all(), fn (Icon $icon) => ! $icon->hidden
             && ($vendor === null || $icon->vendor === $vendor)
-            && ($provider === null || $icon->provider === $provider));
+            && ($provider === null || $icon->provider === $provider)
+            && (! $drawableByKey || $icon->isDrawableByKey()));
 
         return collect($this->search->search($icons, $query, $limit));
     }

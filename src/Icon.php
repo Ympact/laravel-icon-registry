@@ -40,6 +40,15 @@ final readonly class Icon implements Arrayable, JsonSerializable
     ) {}
 
     /**
+     * Whether the key is what the provider's own component draws, so it can be handed to that
+     * component directly, as in `<flux:icon :icon="$key">`, instead of through the registry.
+     */
+    public function isDrawableByKey(): bool
+    {
+        return $this->key === $this->reference;
+    }
+
+    /**
      * Rebuilds an icon from its toArray() form, which is how the cache file stores it.
      *
      * @param  array<string, mixed>  $record

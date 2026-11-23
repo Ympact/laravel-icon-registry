@@ -47,6 +47,13 @@ it('can be scoped to a single vendor', function (): void {
         ->and(($this->errorFor)('acme.logo', IconExists::vendor('tabler')))->not->toBe('');
 });
 
+it('suggests an icon of the same name from the allowed vendor for a key of another vendor', function (): void {
+    $this->workspace->flux(['tabler' => ['logo']]);
+
+    expect(($this->errorFor)('acme.logo', IconExists::vendor('tabler')))
+        ->toBe('The selected icon does not exist. Did you mean tabler.logo?');
+});
+
 it('can be scoped to a single provider', function (): void {
     app(Factory::class)->add('heroicons', ['path' => $this->workspace->svgSet('heroicons', ['o-home']), 'prefix' => 'heroicon']);
 
@@ -83,4 +90,40 @@ it('accepts a hidden icon, but never suggests one', function (): void {
 
     expect(($this->errorFor)('tabler.trash'))->toBe('')
         ->and(($this->errorFor)('tabler.trahs'))->not->toContain('tabler.trash');
+});
+
+describe('drawable by key', function (): void {
+    beforeEach(function (): void {
+        // Loose files are listed as "app.<name>" but drawn by their bare name.
+        $this->workspace->flux(['' => ['home', 'logo']]);
+    });
+
+    it('accepts an icon whose key is what its provider draws', function (): void {
+        expect(($this->errorFor)('tabler.trash', IconExists::drawableByKey()))->toBe('');
+    });
+
+    it('rejects a listed icon whose provider draws it by another name', function (): void {
+        expect(($this->errorFor)('app.logo'))->toBe('')
+            ->and(($this->errorFor)('app.logo', IconExists::drawableByKey()))->toStartWith('The selected icon does not exist.');
+    });
+
+    it('rejects a Blade Icons key, which is drawn by its prefixed name', function (): void {
+        app(Factory::class)->add('heroicons', ['path' => $this->workspace->svgSet('heroicons', ['o-home']), 'prefix' => 'heroicon']);
+
+        expect(($this->errorFor)('heroicons.o-home', IconExists::drawableByKey()))->not->toBe('');
+    });
+
+    it('suggests only an icon that is drawable by its key', function (): void {
+        // Without the constraint "app.home" ranks first: it ties with "tabler.home" and sorts before it.
+        expect(($this->errorFor)('app.home', IconExists::drawableByKey()))
+            ->toBe('The selected icon does not exist. Did you mean tabler.home?');
+    });
+
+    it('combines with a vendor constraint', function (): void {
+        $rule = new IconExists(vendor: 'acme', drawableByKey: true);
+
+        expect(($this->errorFor)('acme.logo', $rule))->toBe('')
+            ->and(($this->errorFor)('tabler.trash', $rule))->not->toBe('')
+            ->and(($this->errorFor)('app.logo', $rule))->toContain('acme.logo');
+    });
 });

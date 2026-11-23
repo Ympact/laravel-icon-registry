@@ -8,6 +8,7 @@ use Ympact\IconRegistry\Facades\Icons;
 Icons::search('dustbin');                        // best match first
 Icons::search('trash', vendor: 'tabler');
 Icons::search('home', provider: 'blade-icons', limit: 20);
+Icons::search('home', drawableByKey: true);      // only keys a component can draw as is
 Icons::search();                                 // everything, in label order
 ```
 

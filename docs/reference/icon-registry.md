@@ -12,7 +12,7 @@ holds the icon set in memory for that request. Resolve it from the container, or
 | `icons(bool $fresh = false): Collection<int, Icon>` | `all()`, or a fresh scan of the providers. |
 | `find(string $key, bool $fresh = false): ?Icon` | The icon with this key, or null. |
 | `vendors(): Collection<int, string>` | The vendors, sorted. |
-| `search(?string $query = null, ?string $vendor = null, int $limit = 50, bool $fresh = false, ?string $provider = null): Collection<int, Icon>` | Leaves out hidden icons. See [Searching and metadata](../usage/searching-and-metadata.md). |
+| `search(?string $query = null, ?string $vendor = null, int $limit = 50, bool $fresh = false, ?string $provider = null, bool $drawableByKey = false): Collection<int, Icon>` | Leaves out hidden icons, and with `drawableByKey` the icons not drawable by their key. See [Searching and metadata](../usage/searching-and-metadata.md). |
 | `render(string $key, ComponentAttributeBag\|array $attributes = []): Htmlable` | The icon drawn by its provider, decorative unless `label` or another accessible name is given ([Accessibility](../usage/storing-and-drawing-icons.md#accessibility)). Throws `UnknownIcon` for a key no provider lists. |
 | `purposes(): Collection<string, Purpose>` | The application's well-formed purposes, by name. |
 | `purpose(string $name): Icon` | The icon of a purpose. Throws `UnknownPurpose` for an undefined or malformed purpose and `UnknownIcon` for a missing icon. |
@@ -50,6 +50,10 @@ A readonly value object.
 | `purposes` | The names of the purposes this icon stands for. |
 | `hidden` | From the metadata: left out of `search()` and the editor manifest. |
 | `terms`, `searchText` | The search index. Internal: left out of `jsonSerialize()`. |
+
+| Method | Returns |
+| --- | --- |
+| `isDrawableByKey(): bool` | Whether `key` equals `reference`, so the key can be handed to the provider's own component as is. See [Keys passed straight to a component](../usage/storing-and-drawing-icons.md#keys-passed-straight-to-a-component). |
 
 ## `Purpose`
 

@@ -181,6 +181,17 @@ it('does not make the files it generates executable', function (): void {
         ->and(fileperms($manifest) & 0777)->toBe(0666 & ~umask());
 });
 
+it('searches only the icons drawable by their key when asked to', function (): void {
+    // A loose file is listed as "app.trash" and drawn as "trash".
+    $this->workspace->flux(['' => ['trash']]);
+
+    $keys = fn (bool $drawableByKey): array => app(IconRegistry::class)
+        ->search('trash', drawableByKey: $drawableByKey)->pluck('key')->sort()->values()->all();
+
+    expect($keys(false))->toBe(['app.trash', 'tabler.trash'])
+        ->and($keys(true))->toBe(['tabler.trash']);
+});
+
 describe('a hidden icon', function (): void {
     beforeEach(function (): void {
         $this->workspace->metadata(['tabler.home' => ['label' => 'House', 'hidden' => true]]);

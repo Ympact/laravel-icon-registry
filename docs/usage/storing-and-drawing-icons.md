@@ -31,12 +31,16 @@ IconExists::provider('blade-icons');
 
 A key drawn with `<x-registry-icon>` can be any listed icon. A key handed straight to a provider's
 own component, such as a Flux `icon=` attribute on `<flux:button>` or `<flux:navlist.item>`, must
-also be that component's reference, or the component throws when the page renders. Only Flux
-icons in a vendor directory (`tabler.home`) meet that; Flux's own (`flux.home`) and the loose
-files (`app.save`) do not. `drawableByKey()` accepts only those icons, and suggests only those:
+also be that component's reference, or the component throws when the page renders.
+`drawableByKey()` accepts only icons whose key is their reference, and suggests only those. Of the
+built-in providers, only Flux icons in a vendor directory (`tabler.home`) meet that; Flux's own
+(`flux.home`), the loose files (`app.save`) and Blade Icons keys do not. A
+[custom provider](../advanced/custom-providers.md) can meet it too, so for a key that only Flux will
+draw, add the provider:
 
 ```php
 IconExists::drawableByKey();
+new IconExists(provider: 'flux', drawableByKey: true);
 new IconExists(vendor: 'tabler', drawableByKey: true);
 ```
 

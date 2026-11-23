@@ -83,6 +83,10 @@ class BrandIconProvider implements IconProvider
 The icons are now `brand.<name>`, searchable, accepted by `IconExists` and drawn by
 `<x-registry-icon>`.
 
+A reference equal to the key opts an icon into `IconExists::drawableByKey()` and
+`search(drawableByKey: true)`, which promise that the key can be handed to the provider's own
+component as is. Use it only when your component draws the icon by that key.
+
 ## Caching
 
 The cache stores what `discover()` returned, including the reference, so `render()` must not

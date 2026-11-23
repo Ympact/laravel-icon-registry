@@ -10,8 +10,10 @@ All notable changes to this package are documented here. The format follows
 
 - `IconExists::drawableByKey()`, also `new IconExists(drawableByKey: true)`, for a key handed straight
   to a provider's own component, such as a Flux `icon=` attribute. It accepts only icons whose key is
-  their reference (Flux icons in a vendor directory) and rejects `flux.home`, `app.save` and Blade
-  Icons keys, which that component throws on.
+  their reference. Of the built-in providers that is Flux icons in a vendor directory; it rejects
+  `flux.home`, `app.save` and Blade Icons keys, which that component throws on. A custom provider
+  that passes the key as the reference is accepted too, so combine it with `provider: 'flux'` for a
+  key only Flux will draw.
 - `Icon::isDrawableByKey()` and a `drawableByKey` argument to `IconRegistry::search()`, for a picker
   that offers the same set the rule accepts.
 

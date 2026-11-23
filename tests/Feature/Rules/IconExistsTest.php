@@ -3,6 +3,7 @@
 use BladeUI\Icons\Factory;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Validator;
+use Tests\Support\FakeIconProvider;
 use Tests\Support\IconWorkspace;
 use Ympact\IconRegistry\IconRegistry;
 use Ympact\IconRegistry\Rules\IconExists;
@@ -117,6 +118,14 @@ describe('drawable by key', function (): void {
         // Without the constraint "app.home" ranks first: it ties with "tabler.home" and sorts before it.
         expect(($this->errorFor)('app.home', IconExists::drawableByKey()))
             ->toBe('The selected icon does not exist. Did you mean tabler.home?');
+    });
+
+    it('accepts a custom provider whose reference is the key, unless narrowed to Flux', function (): void {
+        config()->set('icon-registry.providers.fake', ['driver' => FakeIconProvider::class, 'reference' => 'fake.star']);
+
+        expect(($this->errorFor)('fake.star', IconExists::drawableByKey()))->toBe('')
+            ->and(($this->errorFor)('fake.star', new IconExists(provider: 'flux', drawableByKey: true)))->not->toBe('')
+            ->and(($this->errorFor)('tabler.trash', new IconExists(provider: 'flux', drawableByKey: true)))->toBe('');
     });
 
     it('combines with a vendor constraint', function (): void {

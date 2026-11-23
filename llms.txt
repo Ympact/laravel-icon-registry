@@ -68,7 +68,8 @@ $rules = ['icon' => ['nullable', 'string', new IconExists]];      // or IconExis
 $rules = ['icon' => ['nullable', 'string', IconExists::drawableByKey()]]; // key goes straight into a Flux icon= attribute
 ```
 
-A picker calls `Icons::search($query, vendor: $vendor)` per keystroke and stores `$icon->key`.
+A picker calls `Icons::search($query, vendor: $vendor)` per keystroke and stores `$icon->key`. A picker
+that feeds a Flux `icon=` attribute passes `drawableByKey: true`, so it offers what that rule accepts.
 
 ---
 

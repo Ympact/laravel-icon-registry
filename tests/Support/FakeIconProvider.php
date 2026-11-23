@@ -10,12 +10,13 @@ use Ympact\IconRegistry\DiscoveredIcon;
 use Ympact\IconRegistry\Icon;
 
 /**
- * A provider with one icon, "fake.star", whose availability a test controls through its options.
+ * A provider with one icon, "fake.star", whose availability and reference a test controls through
+ * its options.
  */
 class FakeIconProvider implements IconProvider
 {
     /**
-     * @param  array{available?: bool}  $options
+     * @param  array{available?: bool, reference?: string}  $options
      */
     public function __construct(protected array $options = []) {}
 
@@ -26,7 +27,7 @@ class FakeIconProvider implements IconProvider
 
     public function discover(): array
     {
-        return [new DiscoveredIcon('fake', 'star', 'star')];
+        return [new DiscoveredIcon('fake', 'star', $this->options['reference'] ?? 'star')];
     }
 
     public function render(Icon $icon, ComponentAttributeBag $attributes): Htmlable

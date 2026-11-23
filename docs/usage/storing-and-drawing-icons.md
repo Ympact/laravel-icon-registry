@@ -27,6 +27,27 @@ IconExists::vendor('tabler');
 IconExists::provider('blade-icons');
 ```
 
+### Keys passed straight to a component
+
+A key drawn with `<x-registry-icon>` can be any listed icon. A key handed straight to a provider's
+own component, such as a Flux `icon=` attribute on `<flux:button>` or `<flux:navlist.item>`, must
+also be that component's reference, or the component throws when the page renders.
+`drawableByKey()` accepts only icons whose key is their reference, and suggests only those. Of the
+built-in providers, only Flux icons in a vendor directory (`tabler.home`) meet that; Flux's own
+(`flux.home`), the loose files (`app.save`) and Blade Icons keys do not. A
+[custom provider](../advanced/custom-providers.md) can meet it too, so for a key that only Flux will
+draw, add the provider:
+
+```php
+IconExists::drawableByKey();
+new IconExists(provider: 'flux', drawableByKey: true);
+new IconExists(vendor: 'tabler', drawableByKey: true);
+```
+
+For a key that is listed but excluded by a constraint, the suggestion is an allowed icon of the
+same name where one exists ("Did you mean tabler.home?" for `flux.home`). Search the same set
+with `Icons::search($query, drawableByKey: true)`, and test one icon with `$icon->isDrawableByKey()`.
+
 When a cache exists but predates the icon, the rule checks the providers directly before failing,
 so a newly built icon is accepted without rebuilding the cache first.
 

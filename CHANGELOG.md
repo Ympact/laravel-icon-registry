@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-24
+
 ### Added
 
 - `IconExists::drawableByKey()`, also `new IconExists(drawableByKey: true)`, for a key handed straight
